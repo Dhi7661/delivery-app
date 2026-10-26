@@ -1,0 +1,366 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  SHOP
+  ADMIN
+  RIDER
+}
+
+enum OrderStatus {
+  PLACED
+  PAYMENT_PENDING
+  PAYMENT_FAILED
+  CONFIRMED
+  SENT_TO_SHOP
+  PACKED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  FAILED_DELIVERY
+  CANCELLED
+  RETURNED
+  CLOSED
+}
+
+enum PaymentMethod {
+  UPI
+  CARD
+  NETBANKING
+  WALLET
+  COD
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum ShopStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum LedgerEntryType {
+  SALE
+  RETURN_DEDUCTION
+  ADJUSTMENT
+}
+
+model User {
+  id         String    @id @default(uuid())
+  name       String?
+  phone      String    @unique
+  email      String?
+  role       Role      @default(CUSTOMER)
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+
+  addresses  Address[]
+  orders     Order[]
+  tickets    SupportTicket[]
+
+  @@map("users")
+}
+
+model Address {
+  id         String   @id @default(uuid())
+  user_id    String
+  line1      String
+  landmark   String?
+  pincode    String
+  lat        Float?
+  lng        Float?
+  is_default Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("addresses")
+}
+
+model Shop {
+  id              String          @id @default(uuid())
+  name            String
+  owner_name      String
+  phone           String
+  gstin           String?
+  fssai_no        String?
+  payout_cycle    String          @default("15_DAYS")
+  commission_rate Float           @default(0.10)
+  status          ShopStatus      @default(ACTIVE)
+  created_at      DateTime        @default(now())
+  updated_at      DateTime        @updatedAt
+
+  bank_ref        ShopBankRef?
+  products        Product[]
+  ledger_entries  ShopLedger[]
+  payouts         Payout[]
+  order_items     OrderItem[]
+
+  @@map("shops")
+}
+
+model ShopBankRef {
+  id           String    @id @default(uuid())
+  shop_id      String    @unique
+  provider_ref String
+  last4        String
+  verified_at  DateTime?
+
+  shop         Shop      @relation(fields: [shop_id], references: [id], onDelete: Cascade)
+
+  @@map("shop_bank_refs")
+}
+
+model Category {
+  id         String     @id @default(uuid())
+  name       String
+  parent_id  String?
+  sort_order Int        @default(0)
+  is_active  Boolean    @default(true)
+  created_at DateTime   @default(now())
+
+  parent     Category?  @relation("CategoryHierarchy", fields: [parent_id], references: [id])
+  children   Category[] @relation("CategoryHierarchy")
+  products   Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id                 String         @id @default(uuid())
+  shop_id            String
+  category_id        String
+  name               String
+  brand              String?
+  unit_size          String
+  hsn_code           String?
+  gst_rate           Float          @default(0.0)
+  mrp_paise          Int
+  shop_price_paise   Int
+  selling_price_paise Int
+  is_available       Boolean        @default(true)
+  is_active          Boolean        @default(true)
+  created_at         DateTime       @default(now())
+  updated_at         DateTime       @updatedAt
+
+  shop               Shop           @relation(fields: [shop_id], references: [id])
+  category           Category       @relation(fields: [category_id], references: [id])
+  price_history      PriceHistory[]
+  order_items        OrderItem[]
+
+  @@index([shop_id, is_available])
+  @@map("products")
+}
+
+model PriceHistory {
+  id                  String   @id @default(uuid())
+  product_id          String
+  mrp_paise           Int
+  shop_price_paise    Int
+  selling_price_paise Int
+  effective_from      DateTime @default(now())
+
+  product             Product  @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@map("price_history")
+}
+
+model ServiceablePincode {
+  pincode              String   @id
+  is_active            Boolean  @default(true)
+  delivery_fee_paise   Int      @default(3000)
+  free_threshold_paise Int      @default(15000)
+
+  @@map("serviceable_pincodes")
+}
+
+model Order {
+  id                  String        @id @default(uuid())
+  order_no            String        @unique
+  user_id             String
+  address_snapshot    Json
+  status              OrderStatus   @default(PLACED)
+  subtotal_paise      Int
+  delivery_fee_paise  Int           @default(0)
+  discount_paise      Int           @default(0)
+  total_paise         Int
+  payment_method      PaymentMethod @default(COD)
+  payment_status      PaymentStatus @default(PENDING)
+  created_at          DateTime      @default(now())
+  updated_at          DateTime      @updatedAt
+
+  user                User          @relation(fields: [user_id], references: [id])
+  items               OrderItem[]
+  payments            Payment[]
+  refunds             Refund[]
+  delivery            Delivery?
+  invoice             Invoice?
+  support_tickets     SupportTicket[]
+
+  @@index([user_id, created_at(sort: Desc)])
+  @@index([status, created_at])
+  @@map("orders")
+}
+
+model OrderItem {
+  id                  String       @id @default(uuid())
+  order_id            String
+  product_id          String
+  shop_id             String
+  qty                 Int
+  mrp_paise           Int
+  shop_price_paise    Int
+  selling_price_paise Int
+  line_total_paise    Int
+
+  order               Order        @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product             Product      @relation(fields: [product_id], references: [id])
+  shop                Shop         @relation(fields: [shop_id], references: [id])
+  returns             Return[]
+  ledger_entries      ShopLedger[]
+
+  @@map("order_items")
+}
+
+model Payment {
+  id                 String        @id @default(uuid())
+  order_id           String
+  gateway            String
+  gateway_order_id   String?
+  gateway_payment_id String        @unique
+  amount_paise       Int
+  status             PaymentStatus @default(PENDING)
+  created_at         DateTime      @default(now())
+
+  order              Order         @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([order_id])
+  @@map("payments")
+}
+
+model Refund {
+  id                String   @id @default(uuid())
+  order_id          String
+  amount_paise      Int
+  reason            String
+  status            String   @default("INITIATED")
+  gateway_refund_id String?
+  created_at        DateTime @default(now())
+
+  order             Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@map("refunds")
+}
+
+model Delivery {
+  id                  String   @id @default(uuid())
+  order_id            String   @unique
+  assigned_to         String?
+  status              String   @default("ASSIGNED")
+  cod_collected_paise Int      @default(0)
+  delivered_at        DateTime?
+  failure_reason      String?
+  proof_url           String?
+
+  order               Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@map("deliveries")
+}
+
+model Return {
+  id              String    @id @default(uuid())
+  order_item_id   String
+  qty             Int
+  reason_code     String
+  shop_cost_paise Int
+  status          String    @default("PENDING")
+  created_at      DateTime  @default(now())
+
+  order_item      OrderItem @relation(fields: [order_item_id], references: [id], onDelete: Cascade)
+
+  @@map("returns")
+}
+
+model ShopLedger {
+  id            String          @id @default(uuid())
+  shop_id       String
+  order_item_id String?
+  amount_paise  Int
+  entry_type    LedgerEntryType
+  created_at    DateTime        @default(now())
+
+  shop          Shop            @relation(fields: [shop_id], references: [id])
+  order_item    OrderItem?      @relation(fields: [order_item_id], references: [id])
+
+  @@index([shop_id, created_at])
+  @@map("shop_ledger")
+}
+
+model Payout {
+  id             String    @id @default(uuid())
+  shop_id        String
+  period_start   DateTime
+  period_end     DateTime
+  amount_paise   Int
+  status         String    @default("SCHEDULED")
+  paid_at        DateTime?
+  bank_reference String?
+
+  shop           Shop      @relation(fields: [shop_id], references: [id])
+
+  @@map("payouts")
+}
+
+model Invoice {
+  id                  String   @id @default(uuid())
+  order_id            String   @unique
+  invoice_no          String   @unique
+  invoice_date        DateTime @default(now())
+  taxable_amount_paise Int
+  gst_amount_paise    Int
+  pdf_url             String?
+
+  order               Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@map("invoices")
+}
+
+model SupportTicket {
+  id         String   @id @default(uuid())
+  order_id   String?
+  user_id    String
+  issue_type String
+  message    String
+  status     String   @default("OPEN")
+  created_at DateTime @default(now())
+
+  user       User     @relation(fields: [user_id], references: [id])
+  order      Order?   @relation(fields: [order_id], references: [id])
+
+  @@map("support_tickets")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actor_id   String
+  action     String
+  entity     String
+  entity_id  String
+  old_value  Json?
+  new_value  Json?
+  created_at DateTime @default(now())
+
+  @@map("audit_logs")
+}
