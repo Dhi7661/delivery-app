@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { prisma } from './lib/db.js';
 
 dotenv.config();
 
@@ -14,14 +15,27 @@ app.use(cors({
 
 app.use(express.json());
 
-// API v1 Health Check
-app.get('/api/v1/health', (_req: Request, res: Response) => {
-  res.status(200).json({
-    status: 'ok',
-    service: 'Dashly Delivery Backend',
-    version: '1.0.0',
-    timestamp: new Date().toISOString(),
-  });
+// API v1 Health Check with DB connectivity test
+app.get('/api/v1/health', async (_req: Request, res: Response) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).json({
+      status: 'ok',
+      service: 'Dashly Delivery Backend',
+      version: '1.0.0',
+      database: 'connected (PostgreSQL)',
+      timestamp: new Date().toISOString(),
+    });
+  } catch (dbError) {
+    res.status(503).json({
+      status: 'degraded',
+      service: 'Dashly Delivery Backend',
+      version: '1.0.0',
+      database: 'disconnected',
+      error: dbError instanceof Error ? dbError.message : 'Unknown database error',
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 // Central Error Handler
