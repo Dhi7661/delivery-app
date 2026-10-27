@@ -364,3 +364,14 @@ model AuditLog {
 
   @@map("audit_logs")
 }
+
+model Setting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value_paise Int
+  is_dummy    Boolean  @default(true)
+  updated_at  DateTime @updatedAt
+
+  @@map("settings")
+}
+
