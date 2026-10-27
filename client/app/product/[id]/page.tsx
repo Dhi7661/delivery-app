@@ -4,8 +4,10 @@ import { Suspense, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
+import CartBar from '@/components/CartBar';
 import { API_BASE_URL, ProductDetail } from '@/lib/api';
 import { formatPaise } from '@/lib/money';
+import { useCart } from '@/context/CartContext';
 
 function ProductContent() {
   const params = useParams();
@@ -14,6 +16,9 @@ function ProductContent() {
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { cart, addItem, updateQty } = useCart();
+  const cartItem = cart?.items.find((i) => i.product_id === productId);
 
   useEffect(() => {
     if (!productId) return;
@@ -56,7 +61,7 @@ function ProductContent() {
       : 0;
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 antialiased pb-20">
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 antialiased pb-32">
       <Header showBack title={product?.name || 'Product Details'} />
 
       <main className="mx-auto w-full max-w-md flex-1 px-3 py-3">
@@ -160,25 +165,54 @@ function ProductContent() {
                 </span>
               </div>
 
-              {/* Add to Cart button (min 44px tap target) */}
+              {/* Add to Cart or Quantity Stepper */}
               <div className="mt-4 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  disabled={!product.is_available}
-                  className={`flex min-h-[48px] w-full items-center justify-center rounded-xl font-bold text-base transition-colors ${
-                    product.is_available
-                      ? 'bg-emerald-600 text-white shadow-md hover:bg-emerald-700 active:scale-98'
-                      : 'cursor-not-allowed bg-slate-100 text-slate-400 border border-slate-200'
-                  }`}
-                >
-                  {product.is_available ? 'Add to Cart' : 'Out of stock'}
-                </button>
+                {!product.is_available ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="flex min-h-[48px] w-full items-center justify-center rounded-xl bg-slate-100 font-bold text-base text-slate-400 border border-slate-200 cursor-not-allowed"
+                  >
+                    Out of stock
+                  </button>
+                ) : cartItem ? (
+                  <div className="flex min-h-[48px] w-full items-center justify-between rounded-xl border border-emerald-600 bg-emerald-50 px-4 font-bold text-emerald-900">
+                    <button
+                      type="button"
+                      onClick={() => updateQty(product.id, cartItem.qty - 1)}
+                      aria-label="Decrease quantity"
+                      className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-xl text-emerald-800 hover:bg-emerald-200 active:scale-95"
+                    >
+                      -
+                    </button>
+                    <span className="text-base font-black">
+                      {cartItem.qty} in cart
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => updateQty(product.id, cartItem.qty + 1)}
+                      aria-label="Increase quantity"
+                      className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-xl text-emerald-800 hover:bg-emerald-200 active:scale-95"
+                    >
+                      +
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => addItem(product.id, 1)}
+                    className="flex min-h-[48px] w-full items-center justify-center rounded-xl bg-emerald-600 font-bold text-base text-white shadow-md hover:bg-emerald-700 active:scale-98 transition-colors"
+                  >
+                    Add to Cart
+                  </button>
+                )}
               </div>
             </div>
           </div>
         )}
       </main>
 
+      <CartBar />
       <BottomNav />
     </div>
   );

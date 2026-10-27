@@ -3,12 +3,16 @@
 import Link from 'next/link';
 import { ProductSummary } from '@/lib/api';
 import { formatPaise } from '@/lib/money';
+import { useCart } from '@/context/CartContext';
 
 interface ProductCardProps {
   product: ProductSummary;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
+  const { cart, addItem, updateQty } = useCart();
+  const cartItem = cart?.items.find((i) => i.product_id === product.id);
+
   const hasDiscount = product.mrp_paise > product.selling_price_paise;
   const discountPercent = hasDiscount
     ? Math.round(
@@ -72,18 +76,44 @@ export default function ProductCard({ product }: ProductCardProps) {
           )}
         </div>
 
-        {/* Add button with min 44px tap target */}
-        <button
-          type="button"
-          disabled={!product.is_available}
-          className={`mt-2 flex min-h-[44px] w-full items-center justify-center rounded-xl font-bold text-xs transition-colors ${
-            product.is_available
-              ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-600 hover:text-white active:scale-95'
-              : 'cursor-not-allowed bg-slate-100 text-slate-400 border border-slate-200'
-          }`}
-        >
-          {product.is_available ? 'Add' : 'Unavailable'}
-        </button>
+        {/* Action button: Stepper if in cart, Add button if not */}
+        {!product.is_available ? (
+          <button
+            type="button"
+            disabled
+            className="mt-2 flex min-h-[44px] w-full items-center justify-center rounded-xl bg-slate-100 font-bold text-xs text-slate-400 border border-slate-200 cursor-not-allowed"
+          >
+            Unavailable
+          </button>
+        ) : cartItem ? (
+          <div className="mt-2 flex min-h-[44px] w-full items-center justify-between rounded-xl border border-emerald-600 bg-emerald-50 px-2 font-bold text-emerald-800">
+            <button
+              type="button"
+              onClick={() => updateQty(product.id, cartItem.qty - 1)}
+              aria-label="Decrease quantity"
+              className="flex min-h-[40px] min-w-[36px] items-center justify-center rounded-lg text-base text-emerald-800 hover:bg-emerald-200 active:scale-95"
+            >
+              -
+            </button>
+            <span className="text-sm font-black">{cartItem.qty}</span>
+            <button
+              type="button"
+              onClick={() => updateQty(product.id, cartItem.qty + 1)}
+              aria-label="Increase quantity"
+              className="flex min-h-[40px] min-w-[36px] items-center justify-center rounded-lg text-base text-emerald-800 hover:bg-emerald-200 active:scale-95"
+            >
+              +
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => addItem(product.id, 1)}
+            className="mt-2 flex min-h-[44px] w-full items-center justify-center rounded-xl bg-emerald-50 font-bold text-xs text-emerald-700 border border-emerald-300 hover:bg-emerald-600 hover:text-white active:scale-95 transition-colors"
+          >
+            Add
+          </button>
+        )}
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
+import CartBar from '@/components/CartBar';
 import ProductCard from '@/components/ProductCard';
 import { API_BASE_URL, ProductSummary } from '@/lib/api';
 
@@ -75,7 +76,7 @@ function CategoryContent() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 antialiased pb-20">
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 antialiased pb-32">
       <Header showBack title={category?.name || 'Category'} />
 
       <main className="mx-auto w-full max-w-md flex-1 px-3 py-4">
@@ -131,6 +132,7 @@ function CategoryContent() {
         )}
       </main>
 
+      <CartBar />
       <BottomNav />
     </div>
   );

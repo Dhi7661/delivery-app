@@ -30,3 +30,32 @@ export interface ProductDetail extends ProductSummary {
     name: string;
   };
 }
+
+export interface CartItemData {
+  id: string;
+  product_id: string;
+  qty: number;
+  name: string;
+  brand: string;
+  unit_size: string;
+  mrp_paise: number;
+  selling_price_paise: number;
+  line_total_paise: number;
+  is_available: boolean;
+  shop_id: string;
+  shop_name: string;
+}
+
+export interface CartData {
+  id: string;
+  shop_id: string | null;
+  shop_name: string | null;
+  items: CartItemData[];
+  item_count: number;
+  subtotal_paise: number;
+  delivery_fee_paise: number;
+  free_delivery_threshold_paise: number;
+  free_delivery_gap_paise: number;
+  free_delivery_message: string;
+  total_paise: number;
+}
