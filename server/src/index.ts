@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { prisma } from './lib/db.js';
 import { BRAND_NAME } from './lib/brand.js';
+import { catalogRouter } from './routes/catalog.js';
 
 dotenv.config();
 
@@ -15,6 +16,9 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// Catalog API routes
+app.use('/api', catalogRouter);
 
 // API v1 Health Check with DB connectivity test
 app.get('/api/v1/health', async (_req: Request, res: Response) => {
