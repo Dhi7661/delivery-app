@@ -11,6 +11,7 @@ import {
   requiresCancellationReason,
   STATUS_LABELS,
 } from '../lib/orderStatus.js';
+import { dispatchOrderStatusNotifications, retryNotification } from '../lib/notifications.js';
 
 export const adminRouter = Router();
 
@@ -544,6 +545,12 @@ adminRouter.get('/admin/orders/:id', requireAdminAuth, async (req: Request, res:
       orderBy: { created_at: 'desc' },
     });
 
+    // Fetch notification records for this order (F14)
+    const notifications = await prisma.orderNotification.findMany({
+      where: { order_id: order.id },
+      orderBy: { created_at: 'desc' },
+    });
+
     res.status(200).json({
       success: true,
       order: {
@@ -551,6 +558,7 @@ adminRouter.get('/admin/orders/:id', requireAdminAuth, async (req: Request, res:
         allowedTransitions: getNextAllowedStatuses(order.status),
       },
       auditLogs,
+      notifications,
     });
   } catch (error: any) {
     console.error('Error fetching admin order detail:', error);
@@ -678,6 +686,13 @@ adminRouter.patch('/admin/orders/:id/status', requireAdminAuth, async (req: Requ
       return updated;
     });
 
+    // F14: Dispatch status notifications (SMS / WhatsApp)
+    try {
+      await dispatchOrderStatusNotifications(updatedOrder.id, targetStatus);
+    } catch (notifErr) {
+      console.error('[Notification] Error dispatching status notifications:', notifErr);
+    }
+
     res.status(200).json({
       success: true,
       message: `Order ${order.order_no} status updated to ${targetStatus}`,
@@ -689,6 +704,67 @@ adminRouter.patch('/admin/orders/:id/status', requireAdminAuth, async (req: Requ
   } catch (error: any) {
     console.error('Error updating order status:', error);
     res.status(500).json({ error: error.message || 'Failed to update order status' });
+  }
+});
+
+/**
+ * GET /api/admin/notifications
+ * Log of notifications visible in admin (F14 acceptance check).
+ */
+adminRouter.get('/admin/notifications', requireAdminAuth, async (req: Request, res: Response) => {
+  try {
+    const { status, limit } = req.query;
+    const take = typeof limit === 'string' ? Math.min(parseInt(limit, 10) || 50, 100) : 50;
+
+    const where: Prisma.OrderNotificationWhereInput = {};
+    if (status && typeof status === 'string' && ['PENDING', 'SENT', 'FAILED'].includes(status)) {
+      where.status = status as any;
+    }
+
+    const notifications = await prisma.orderNotification.findMany({
+      where,
+      orderBy: { created_at: 'desc' },
+      take,
+      include: {
+        order: {
+          select: {
+            id: true,
+            order_no: true,
+            guest_name: true,
+            total_paise: true,
+            payment_method: true,
+          },
+        },
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      notifications,
+      count: notifications.length,
+    });
+  } catch (error: any) {
+    console.error('Error fetching admin notifications:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch notifications' });
+  }
+});
+
+/**
+ * POST /api/admin/notifications/:id/retry
+ * Manually retry a failed notification.
+ */
+adminRouter.post('/admin/notifications/:id/retry', requireAdminAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updated = await retryNotification(id);
+    res.status(200).json({
+      success: true,
+      message: `Notification retry processed. Current status: ${updated.status}`,
+      notification: updated,
+    });
+  } catch (error: any) {
+    console.error('Error retrying notification:', error);
+    res.status(500).json({ error: error.message || 'Failed to retry notification' });
   }
 });
 

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { OrderStatus } from '@prisma/client';
 import { prisma } from '../lib/db.js';
 import { requireAdminAuth } from './admin.js';
+import { dispatchOrderStatusNotifications } from '../lib/notifications.js';
 
 export const deliveryRouter = Router();
 
@@ -184,6 +185,13 @@ deliveryRouter.post('/admin/deliveries/:orderId/start', requireAdminAuth, async 
       return updatedOrder;
     });
 
+    // F14: Dispatch OUT_FOR_DELIVERY notification
+    try {
+      await dispatchOrderStatusNotifications(order.id, 'OUT_FOR_DELIVERY');
+    } catch (notifErr) {
+      console.error('[Notification] Error dispatching OUT_FOR_DELIVERY notification:', notifErr);
+    }
+
     res.status(200).json({
       success: true,
       message: `Delivery started for order ${order.order_no}`,
@@ -304,6 +312,13 @@ deliveryRouter.post('/admin/deliveries/:orderId/delivered', requireAdminAuth, as
 
       return updatedOrder;
     });
+
+    // F14: Dispatch DELIVERED notification
+    try {
+      await dispatchOrderStatusNotifications(order.id, 'DELIVERED');
+    } catch (notifErr) {
+      console.error('[Notification] Error dispatching DELIVERED notification:', notifErr);
+    }
 
     res.status(200).json({
       success: true,

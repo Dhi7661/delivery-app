@@ -6,6 +6,7 @@ import { CART_COOKIE_NAME } from './cart.js';
 import { calculateDeliveryFee, isCodAllowed } from '../lib/pricing.js';
 import { getNextOrderNumber } from '../lib/order.js';
 import { getAuthenticatedUser } from './auth.js';
+import { dispatchOrderStatusNotifications, normalizePhone, maskPhone } from '../lib/notifications.js';
 
 type CartWithItems = Prisma.CartGetPayload<{
   include: {
@@ -250,6 +251,13 @@ checkoutRouter.post('/checkout', async (req: Request, res: Response) => {
       return order;
     });
 
+    // F14: Dispatch automated confirmation notification
+    try {
+      await dispatchOrderStatusNotifications(createdOrder.id, 'CONFIRMED');
+    } catch (notifErr) {
+      console.error('[Notification] Failed to trigger CONFIRMED notification:', notifErr);
+    }
+
     // 7. Return the order details
     res.status(201).json({
       success: true,
@@ -269,12 +277,110 @@ checkoutRouter.post('/checkout', async (req: Request, res: Response) => {
 });
 
 /**
+ * Helper to construct an interactive status timeline for order tracking (F14)
+ */
+async function buildOrderTimeline(order: any) {
+  // Fetch audit logs for this order
+  const logs = await prisma.auditLog.findMany({
+    where: {
+      entity: { in: ['orders', 'deliveries'] },
+      entity_id: order.id,
+    },
+    orderBy: { created_at: 'asc' },
+  });
+
+  const stageOrder = ['CONFIRMED', 'SENT_TO_SHOP', 'PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
+  const labels: Record<string, string> = {
+    CONFIRMED: 'Order Confirmed',
+    SENT_TO_SHOP: 'Sent to Shop',
+    PACKED: 'Packed & Ready',
+    OUT_FOR_DELIVERY: 'Out for Delivery',
+    DELIVERED: 'Delivered',
+    FAILED_DELIVERY: 'Delivery Attempt Failed',
+    CANCELLED: 'Order Cancelled',
+  };
+
+  const descriptions: Record<string, string> = {
+    CONFIRMED: 'Your fresh order has been received and confirmed.',
+    SENT_TO_SHOP: 'Order details sent to local partner shop for preparation.',
+    PACKED: 'Items have been freshly packed and are ready for pickup.',
+    OUT_FOR_DELIVERY: 'Our delivery partner is on the way to your address.',
+    DELIVERED: 'Package successfully delivered and handed over.',
+    FAILED_DELIVERY: 'Delivery was attempted but could not be completed.',
+    CANCELLED: 'This order has been cancelled.',
+  };
+
+  const currentStatus = order.status;
+  const isCancelled = currentStatus === 'CANCELLED';
+  const isFailed = currentStatus === 'FAILED_DELIVERY';
+
+  const timestamps: Record<string, Date> = {
+    CONFIRMED: order.created_at,
+  };
+
+  for (const log of logs) {
+    const newVal = log.new_value as any;
+    if (newVal?.status && typeof newVal.status === 'string') {
+      timestamps[newVal.status] = log.created_at;
+    }
+  }
+
+  if (order.delivery?.delivered_at) {
+    timestamps['DELIVERED'] = order.delivery.delivered_at;
+  }
+
+  const currentIndex = stageOrder.indexOf(currentStatus);
+
+  const timeline = stageOrder.map((stage, idx) => {
+    const isCompleted = currentIndex >= 0 ? idx <= currentIndex : false;
+    const isCurrent = currentStatus === stage;
+    return {
+      status: stage,
+      label: labels[stage] || stage,
+      description: descriptions[stage] || '',
+      timestamp: timestamps[stage] ? timestamps[stage].toISOString() : null,
+      completed: isCancelled ? false : isCompleted,
+      current: isCurrent,
+    };
+  });
+
+  if (isFailed) {
+    timeline.push({
+      status: 'FAILED_DELIVERY',
+      label: labels.FAILED_DELIVERY,
+      description: order.delivery?.failure_reason || descriptions.FAILED_DELIVERY,
+      timestamp: timestamps.FAILED_DELIVERY ? timestamps.FAILED_DELIVERY.toISOString() : new Date().toISOString(),
+      completed: true,
+      current: true,
+    });
+  }
+
+  if (isCancelled) {
+    timeline.push({
+      status: 'CANCELLED',
+      label: labels.CANCELLED,
+      description: descriptions.CANCELLED,
+      timestamp: timestamps.CANCELLED ? timestamps.CANCELLED.toISOString() : new Date().toISOString(),
+      completed: true,
+      current: true,
+    });
+  }
+
+  return timeline;
+}
+
+/**
  * GET /api/orders/:orderNo
- * Order confirmation and tracking summary.
+ * Order confirmation and tracking summary with phone verification and status timeline.
+ * Rules:
+ * - Guests enter order number and phone to view it.
+ * - Guest cannot see another guest's order with a wrong phone number.
+ * - Logged-in customers see it in their history.
  */
 checkoutRouter.get('/orders/:orderNo', async (req: Request, res: Response) => {
   try {
     const { orderNo } = req.params;
+    const queryPhone = req.query.phone as string | undefined;
 
     const order = await prisma.order.findUnique({
       where: { order_no: orderNo },
@@ -298,6 +404,13 @@ checkoutRouter.get('/orders/:orderNo', async (req: Request, res: Response) => {
           },
         },
         delivery: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+          },
+        },
       },
     });
 
@@ -305,9 +418,41 @@ checkoutRouter.get('/orders/:orderNo', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    res.status(200).json({ order });
+    const orderPhone = normalizePhone(order.guest_phone || order.user?.phone || '');
+    const authUser = await getAuthenticatedUser(req);
+
+    // 1. If query phone is provided, strictly verify that it matches
+    let isVerified = false;
+    if (queryPhone) {
+      const cleanQuery = normalizePhone(queryPhone);
+      if (cleanQuery !== orderPhone) {
+        return res.status(403).json({ error: 'Phone number does not match this order.' });
+      }
+      isVerified = true;
+    } else if (authUser) {
+      // 2. Logged-in customer check
+      const isOwner = (order.user_id && order.user_id === authUser.id) || normalizePhone(authUser.phone) === orderPhone;
+      if (order.user_id && !isOwner) {
+        return res.status(403).json({ error: 'You do not have permission to view this order.' });
+      }
+      isVerified = isOwner;
+    }
+
+    const sanitizedOrder = {
+      ...order,
+      guest_phone: order.guest_phone,
+    };
+
+    const timeline = await buildOrderTimeline(order);
+
+    res.status(200).json({
+      order: sanitizedOrder,
+      timeline,
+      isVerified,
+    });
   } catch (error) {
     console.error('Error fetching order:', error);
     res.status(500).json({ error: 'Failed to fetch order' });
   }
 });
+

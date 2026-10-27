@@ -142,10 +142,10 @@ export default function OrdersPage() {
                   </div>
 
                   <Link
-                    href={`/order/${order.order_no}`}
+                    href={`/orders/${order.order_no}`}
                     className="flex min-h-[36px] items-center rounded-lg bg-emerald-50 px-3 text-xs font-bold text-emerald-800 hover:bg-emerald-100 active:scale-95"
                   >
-                    View Details &rarr;
+                    Track Order &rarr;
                   </Link>
                 </div>
               </div>

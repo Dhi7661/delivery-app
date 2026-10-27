@@ -73,6 +73,24 @@ interface AuditLogEntry {
   created_at: string;
 }
 
+interface NotificationEntry {
+  id: string;
+  order_status: string;
+  recipient_type: string;
+  recipient: string;
+  channel: 'SMS' | 'WHATSAPP' | 'EMAIL';
+  message: string;
+  status: 'PENDING' | 'SENT' | 'FAILED';
+  attempts: number;
+  last_error: string | null;
+  metadata?: {
+    shop_id?: string;
+    shop_name?: string;
+    whatsapp_url?: string;
+  } | null;
+  created_at: string;
+}
+
 function AdminOrderDetailContent() {
   const router = useRouter();
   const params = useParams();
@@ -83,6 +101,8 @@ function AdminOrderDetailContent() {
 
   const [order, setOrder] = useState<OrderDetailData | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [notifications, setNotifications] = useState<NotificationEntry[]>([]);
+  const [retryingNotifId, setRetryingNotifId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -132,6 +152,7 @@ function AdminOrderDetailContent() {
 
       setOrder(data.order);
       setAuditLogs(data.auditLogs || []);
+      setNotifications(data.notifications || []);
     } catch (err) {
       console.error('Fetch order detail error:', err);
       setError('Network error while loading order details.');
@@ -436,6 +457,132 @@ function AdminOrderDetailContent() {
                   </span>
                 </div>
               </div>
+            </div>
+
+            {/* Notifications & Shop WhatsApp Card (F14) */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <span>🔔</span>
+                  <span>Notifications &amp; WhatsApp ({notifications.length})</span>
+                </h2>
+                <Link
+                  href="/admin/notifications"
+                  className="text-[11px] font-bold text-emerald-700 hover:underline"
+                >
+                  All Logs &rarr;
+                </Link>
+              </div>
+
+              {notifications.length === 0 ? (
+                <p className="text-xs text-slate-400 italic">No notifications sent for this order yet.</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {notifications.map((n) => {
+                    const isWhatsApp = n.channel === 'WHATSAPP';
+                    const isFailed = n.status === 'FAILED';
+                    return (
+                      <div
+                        key={n.id}
+                        className={`rounded-xl border p-3 text-xs space-y-2 ${
+                          isFailed
+                            ? 'border-red-200 bg-red-50/50'
+                            : 'border-slate-100 bg-slate-50/50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1 flex-wrap">
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                                n.recipient_type === 'SHOP'
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-emerald-100 text-emerald-800'
+                              }`}
+                            >
+                              {n.recipient_type}
+                            </span>
+                            <span className="font-bold text-slate-700">
+                              {n.channel} ({n.order_status})
+                            </span>
+                          </div>
+
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              n.status === 'SENT'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : n.status === 'FAILED'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}
+                          >
+                            {n.status}
+                          </span>
+                        </div>
+
+                        <div className="text-[11px] text-slate-600 bg-white p-2 rounded-lg border border-slate-200/60 font-mono whitespace-pre-line break-words">
+                          {n.message}
+                        </div>
+
+                        {isFailed && n.last_error && (
+                          <div className="text-[10px] text-red-700 bg-red-100/60 p-1.5 rounded-md">
+                            Error: {n.last_error}
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between pt-1 text-[10px] text-slate-400">
+                          <span>
+                            To: <strong className="text-slate-700">{n.recipient}</strong> •{' '}
+                            {new Date(n.created_at).toLocaleTimeString('en-IN', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+
+                          <div className="flex items-center gap-1.5">
+                            {/* WhatsApp Button */}
+                            {isWhatsApp && n.metadata?.whatsapp_url && (
+                              <a
+                                href={n.metadata.whatsapp_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 px-2.5 py-1 min-h-[32px] bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-[11px] shadow-xs active:scale-95 transition-all cursor-pointer"
+                              >
+                                <span>💬</span>
+                                <span>Send WhatsApp</span>
+                              </a>
+                            )}
+
+                            {/* Retry Button */}
+                            {isFailed && (
+                              <button
+                                type="button"
+                                disabled={retryingNotifId === n.id}
+                                onClick={async () => {
+                                  setRetryingNotifId(n.id);
+                                  try {
+                                    await fetch(`${API_BASE_URL}/admin/notifications/${n.id}/retry`, {
+                                      method: 'POST',
+                                      credentials: 'include',
+                                    });
+                                    await fetchOrderDetail();
+                                  } catch (err) {
+                                    console.error('Retry failed:', err);
+                                  } finally {
+                                    setRetryingNotifId(null);
+                                  }
+                                }}
+                                className="px-2.5 py-1 min-h-[32px] bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-[11px] active:scale-95 cursor-pointer disabled:opacity-50"
+                              >
+                                {retryingNotifId === n.id ? 'Retrying...' : 'Retry Send'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Audit & Transition History Card */}

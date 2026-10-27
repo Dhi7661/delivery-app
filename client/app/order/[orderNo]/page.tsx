@@ -121,6 +121,15 @@ function OrderDetailsContent() {
             Status: {order.status}
           </span>
         </div>
+
+        <div className="mt-3 pt-2 border-t border-emerald-100/80">
+          <Link
+            href={`/orders/${order.order_no}`}
+            className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-xs font-extrabold text-white shadow-md hover:bg-emerald-700 active:scale-98 transition-transform"
+          >
+            <span>📍 Track Live Delivery Status &rarr;</span>
+          </Link>
+        </div>
       </div>
 
       {/* PROMINENT CASH ON DELIVERY CALLOUT */}
