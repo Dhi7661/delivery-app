@@ -1,9 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Header from '@/components/Header';
 import { API_BASE_URL } from '@/lib/api';
+
+interface AdminProfile {
+  id: string;
+  email: string;
+  name?: string;
+}
 
 interface UploadSuccessData {
   totalProcessed: number;
@@ -26,14 +32,55 @@ interface UploadErrorItem {
 }
 
 export default function AdminProductUploadPage() {
-  const [adminPassword, setAdminPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
+  const [admin, setAdmin] = useState<AdminProfile | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [file, setFile] = useState<File | null>(null);
   const [csvContent, setCsvContent] = useState<string>('');
   const [uploading, setUploading] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [successResult, setSuccessResult] = useState<UploadSuccessData | null>(null);
   const [errorList, setErrorList] = useState<UploadErrorItem[] | null>(null);
   const [generalError, setGeneralError] = useState<string | null>(null);
+
+  // Check admin session on mount
+  useEffect(() => {
+    async function verifyAdminSession() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/auth/me`, {
+          credentials: 'include',
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.admin) {
+            setAdmin(data.admin);
+            setCheckingAuth(false);
+            return;
+          }
+        }
+        // Unauthenticated, redirect to admin login
+        router.replace('/admin/login');
+      } catch (err) {
+        router.replace('/admin/login');
+      }
+    }
+
+    verifyAdminSession();
+  }, [router]);
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await fetch(`${API_BASE_URL}/admin/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      router.replace('/admin/login');
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
@@ -74,10 +121,6 @@ export default function AdminProductUploadPage() {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adminPassword.trim()) {
-      setGeneralError('Please enter the admin password.');
-      return;
-    }
 
     if (!csvContent.trim()) {
       setGeneralError('Please select or load a CSV file first.');
@@ -94,8 +137,8 @@ export default function AdminProductUploadPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-password': adminPassword.trim(),
         },
+        credentials: 'include',
         body: JSON.stringify({
           csvContent,
           fileName: file?.name || 'products.csv',
@@ -111,6 +154,9 @@ export default function AdminProductUploadPage() {
           updatedCount: data.updatedCount,
           products: data.products || [],
         });
+      } else if (res.status === 401) {
+        setGeneralError('Your admin session has expired. Please sign in again.');
+        setTimeout(() => router.push('/admin/login'), 1500);
       } else {
         if (data.errors && Array.isArray(data.errors)) {
           setErrorList(data.errors);
@@ -126,9 +172,48 @@ export default function AdminProductUploadPage() {
     }
   };
 
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-slate-500 font-medium">Verifying admin credentials...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 antialiased pb-20">
-      <Header showBack title="Admin Product Upload" />
+      {/* Admin Top Navigation Bar */}
+      <header className="sticky top-0 z-30 bg-slate-900 text-white border-b border-slate-800 px-4 py-3 shadow-md">
+        <div className="mx-auto max-w-lg flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <Link href="/" className="flex items-center gap-2">
+              <span className="w-7 h-7 bg-emerald-500 rounded-lg flex items-center justify-center font-black text-white text-sm">
+                P
+              </span>
+              <span className="font-extrabold text-base tracking-tight">PlukIt</span>
+            </Link>
+            <span className="px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-full text-[10px] font-black uppercase tracking-wider">
+              Admin
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-slate-300 font-medium hidden sm:inline-block truncate max-w-[150px]">
+              {admin?.email}
+            </span>
+            <button
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="px-3 py-1.5 min-h-[36px] bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg transition-colors border border-slate-700"
+            >
+              {loggingOut ? 'Logging out...' : 'Sign Out'}
+            </button>
+          </div>
+        </div>
+      </header>
 
       <main className="mx-auto w-full max-w-lg flex-1 px-3 py-4 space-y-4">
         {/* Page Banner / Header */}
@@ -148,31 +233,6 @@ export default function AdminProductUploadPage() {
 
         {/* Upload Form */}
         <form onSubmit={handleUpload} className="rounded-2xl bg-white border border-slate-200 p-4 shadow-2xs space-y-4">
-          {/* Admin Password */}
-          <div>
-            <label htmlFor="admin-pass" className="block text-xs font-bold text-slate-700 mb-1">
-              Admin Password <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative">
-              <input
-                id="admin-pass"
-                type={showPassword ? 'text' : 'password'}
-                required
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                placeholder="Enter ADMIN_PASSWORD"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 pr-14 text-sm font-medium text-slate-800 placeholder-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 focus:outline-hidden min-h-[44px]"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 hover:text-slate-800 p-1"
-              >
-                {showPassword ? 'Hide' : 'Show'}
-              </button>
-            </div>
-          </div>
-
           {/* Sample CSV helper card */}
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs space-y-2">
             <div className="flex items-center justify-between">
@@ -233,9 +293,9 @@ export default function AdminProductUploadPage() {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={uploading || !csvContent.trim() || !adminPassword.trim()}
+            disabled={uploading || !csvContent.trim()}
             className={`flex min-h-[48px] w-full items-center justify-center rounded-xl font-bold text-sm text-white shadow-md transition-all active:scale-98 ${
-              uploading || !csvContent.trim() || !adminPassword.trim()
+              uploading || !csvContent.trim()
                 ? 'bg-slate-300 cursor-not-allowed text-slate-500'
                 : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 cursor-pointer'
             }`}
