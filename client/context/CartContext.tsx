@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { API_BASE_URL, CartData } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 
 interface CartContextType {
   cart: CartData | null;
@@ -16,6 +17,7 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [cart, setCart] = useState<CartData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -37,7 +39,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     fetchCart();
-  }, []);
+  }, [user?.id]);
 
   async function addItem(productId: string, qty = 1) {
     try {

@@ -74,26 +74,42 @@ checkoutRouter.post('/checkout', async (req: Request, res: Response) => {
       });
     }
 
-    // 3. Read cart from cookie
-    const token = req.cookies?.[CART_COOKIE_NAME];
-    if (!token) {
-      return res.status(400).json({
-        error: 'Your cart is empty. Please add items before checking out.',
-      });
-    }
+    // 3. Read cart (by authenticated user or cookie token)
+    const authUser = await getAuthenticatedUser(req);
+    let cart: any = null;
 
-    const cart = await prisma.cart.findUnique({
-      where: { token },
-      include: {
-        items: {
-          include: {
-            product: {
-              include: { shop: true },
+    if (authUser) {
+      cart = await prisma.cart.findUnique({
+        where: { user_id: authUser.id },
+        include: {
+          items: {
+            include: {
+              product: {
+                include: { shop: true },
+              },
             },
           },
         },
-      },
-    });
+      });
+    }
+
+    if (!cart) {
+      const token = req.cookies?.[CART_COOKIE_NAME];
+      if (token) {
+        cart = await prisma.cart.findUnique({
+          where: { token },
+          include: {
+            items: {
+              include: {
+                product: {
+                  include: { shop: true },
+                },
+              },
+            },
+          },
+        });
+      }
+    }
 
     if (!cart || cart.items.length === 0) {
       return res.status(400).json({
@@ -142,7 +158,6 @@ checkoutRouter.post('/checkout', async (req: Request, res: Response) => {
 
     // 5 & 6. Transaction: Generate order number, create Order + OrderItems + Delivery, and empty Cart
     const orderNo = await getNextOrderNumber();
-    const authUser = await getAuthenticatedUser(req);
 
     const createdOrder = await prisma.$transaction(async (tx) => {
       const order = await tx.order.create({

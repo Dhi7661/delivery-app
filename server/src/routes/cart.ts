@@ -3,32 +3,13 @@ import crypto from 'node:crypto';
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
 import { calculateDeliveryFee, getSetting } from '../lib/pricing.js';
+import { getAuthenticatedUser } from './auth.js';
 
 export const cartRouter = Router();
 
 export const CART_COOKIE_NAME = 'cart_token';
 
-/**
- * Retrieve or initialize a Cart using httpOnly cookie.
- */
-export async function getOrCreateCart(req: Request, res: Response) {
-  let token = req.cookies?.[CART_COOKIE_NAME];
-
-  if (typeof token === 'string' && token.length > 0) {
-    const existing = await prisma.cart.findUnique({
-      where: { token },
-    });
-    if (existing) {
-      return existing;
-    }
-  }
-
-  // Generate new token & cart
-  token = crypto.randomUUID();
-  const newCart = await prisma.cart.create({
-    data: { token },
-  });
-
+export function setCartCookie(res: Response, token: string) {
   res.cookie(CART_COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: 'lax',
@@ -36,7 +17,71 @@ export async function getOrCreateCart(req: Request, res: Response) {
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     path: '/',
   });
+}
 
+/**
+ * Retrieve or initialize a Cart using user session (if logged in) or httpOnly cart cookie.
+ */
+export async function getOrCreateCart(req: Request, res: Response) {
+  const authUser = await getAuthenticatedUser(req);
+  const cookieToken = req.cookies?.[CART_COOKIE_NAME];
+
+  if (authUser) {
+    // 1. Authenticated user: Cart belongs to authUser.id
+    let userCart = await prisma.cart.findUnique({
+      where: { user_id: authUser.id },
+    });
+
+    if (userCart) {
+      if (cookieToken !== userCart.token) {
+        setCartCookie(res, userCart.token);
+      }
+      return userCart;
+    }
+
+    // If user has no cart, check if there is an unassigned guest cart in cookie
+    if (typeof cookieToken === 'string' && cookieToken.length > 0) {
+      const guestCart = await prisma.cart.findUnique({
+        where: { token: cookieToken },
+      });
+      if (guestCart && !guestCart.user_id) {
+        userCart = await prisma.cart.update({
+          where: { id: guestCart.id },
+          data: { user_id: authUser.id },
+        });
+        return userCart;
+      }
+    }
+
+    // Create new cart for authenticated user
+    const newToken = crypto.randomUUID();
+    userCart = await prisma.cart.create({
+      data: {
+        token: newToken,
+        user_id: authUser.id,
+      },
+    });
+    setCartCookie(res, newToken);
+    return userCart;
+  }
+
+  // 2. Guest user (not logged in)
+  if (typeof cookieToken === 'string' && cookieToken.length > 0) {
+    const existing = await prisma.cart.findUnique({
+      where: { token: cookieToken },
+    });
+    // Return existing guest cart ONLY if not owned by a registered user
+    if (existing && !existing.user_id) {
+      return existing;
+    }
+  }
+
+  // Generate new guest token & cart
+  const token = crypto.randomUUID();
+  const newCart = await prisma.cart.create({
+    data: { token },
+  });
+  setCartCookie(res, token);
   return newCart;
 }
 
