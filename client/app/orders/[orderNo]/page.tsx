@@ -68,8 +68,12 @@ function OrderTrackingContent() {
         return;
       }
       if (res.status === 403) {
-        // Wrong phone number
-        setPhoneError('Phone number does not match this order. Please enter the number used during checkout.');
+        const errData = await res.json().catch(() => ({}));
+        if (user) {
+          setError('Access Denied: This order does not belong to your account.');
+        } else {
+          setPhoneError(errData.error || 'Phone number does not match this order. Please enter the number used during checkout.');
+        }
         setIsVerified(false);
         return;
       }
@@ -81,7 +85,7 @@ function OrderTrackingContent() {
       const data = await res.json();
       setOrder(data.order);
       setTimeline(data.timeline || []);
-      setIsVerified(Boolean(data.isVerified || user));
+      setIsVerified(Boolean(data.isVerified));
 
       if (phoneParam && data.isVerified && typeof window !== 'undefined') {
         sessionStorage.setItem(`track_phone_${orderNo}`, phoneParam.trim());
@@ -136,17 +140,29 @@ function OrderTrackingContent() {
           </div>
         ) : error || !order ? (
           <div className="flex min-h-[400px] flex-col items-center justify-center text-center px-4">
-            <span className="text-5xl">🔍</span>
-            <h1 className="mt-3 text-lg font-bold text-slate-800">Order Not Found</h1>
+            <span className="text-5xl">{error?.includes('Access Denied') ? '🔒' : '🔍'}</span>
+            <h1 className="mt-3 text-lg font-bold text-slate-800">
+              {error?.includes('Access Denied') ? 'Access Denied' : 'Order Not Found'}
+            </h1>
             <p className="mt-1 text-sm text-slate-500 max-w-xs">
               {error || 'We could not locate this order.'}
             </p>
-            <Link
-              href="/"
-              className="mt-5 flex min-h-[48px] items-center justify-center rounded-xl bg-emerald-600 px-6 font-bold text-sm text-white shadow-md hover:bg-emerald-700 active:scale-98"
-            >
-              Return Home
-            </Link>
+            <div className="mt-5 flex gap-2">
+              {user && (
+                <Link
+                  href="/orders"
+                  className="flex min-h-[48px] items-center justify-center rounded-xl bg-emerald-600 px-6 font-bold text-sm text-white shadow-md hover:bg-emerald-700 active:scale-98"
+                >
+                  View My Orders
+                </Link>
+              )}
+              <Link
+                href="/"
+                className="flex min-h-[48px] items-center justify-center rounded-xl bg-slate-100 px-6 font-bold text-sm text-slate-700 hover:bg-slate-200 active:scale-98"
+              >
+                Return Home
+              </Link>
+            </div>
           </div>
         ) : (
           <>
@@ -187,14 +203,14 @@ function OrderTrackingContent() {
               </div>
 
               {/* Guest Phone Verification Gate */}
-              {!isVerified && !user && (
+              {!isVerified && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3.5 space-y-2">
                   <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
                     <span>🔒</span>
-                    <span>Verify Phone to View Full Timeline</span>
+                    <span>Verify Phone to View Full Timeline &amp; Order Details</span>
                   </div>
                   <p className="text-[11px] text-amber-800 leading-normal">
-                    Enter the 10-digit mobile number used when placing this order to view real-time delivery status.
+                    Enter the 10-digit mobile number used when placing this order to view real-time delivery status and order details.
                   </p>
 
                   <form onSubmit={handleVerifyPhone} className="space-y-2 pt-1">
@@ -215,7 +231,7 @@ function OrderTrackingContent() {
                         disabled={verifying}
                         className="rounded-xl bg-emerald-600 px-4 text-xs font-bold text-white hover:bg-emerald-700 active:scale-95 transition-transform min-h-[44px] cursor-pointer disabled:opacity-50 shrink-0"
                       >
-                        {verifying ? 'Checking...' : 'Track'}
+                        {verifying ? 'Checking...' : 'Verify & Track'}
                       </button>
                     </div>
 
@@ -229,7 +245,18 @@ function OrderTrackingContent() {
               )}
             </div>
 
-            {/* INTERACTIVE STATUS TIMELINE */}
+            {/* UNVERIFIED STATE NOTICE */}
+            {!isVerified ? (
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center space-y-2 shadow-2xs">
+                <span className="text-3xl">🛡️</span>
+                <h3 className="text-sm font-bold text-slate-800">Order Protected</h3>
+                <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+                  For customer privacy and security, delivery address, items, and live tracking are hidden until phone ownership is confirmed.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* INTERACTIVE STATUS TIMELINE */}
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
@@ -395,6 +422,8 @@ function OrderTrackingContent() {
             <div className="p-3 text-center text-xs text-slate-400">
               Need help with this order? PlukIt support is ready to assist.
             </div>
+              </>
+            )}
           </>
         )}
       </main>

@@ -421,21 +421,21 @@ checkoutRouter.get('/orders/:orderNo', async (req: Request, res: Response) => {
     const orderPhone = normalizePhone(order.guest_phone || order.user?.phone || '');
     const authUser = await getAuthenticatedUser(req);
 
-    // 1. If query phone is provided, strictly verify that it matches
+    // 1. If user is logged in as a customer: strictly verify they own the order
     let isVerified = false;
-    if (queryPhone) {
+    if (authUser) {
+      const isOwner = (order.user_id && order.user_id === authUser.id) || (orderPhone && normalizePhone(authUser.phone) === orderPhone);
+      if (!isOwner) {
+        return res.status(403).json({ error: 'You do not have permission to view this order.' });
+      }
+      isVerified = true;
+    } else if (queryPhone) {
+      // 2. If guest verifies with phone query parameter
       const cleanQuery = normalizePhone(queryPhone);
       if (cleanQuery !== orderPhone) {
         return res.status(403).json({ error: 'Phone number does not match this order.' });
       }
       isVerified = true;
-    } else if (authUser) {
-      // 2. Logged-in customer check
-      const isOwner = (order.user_id && order.user_id === authUser.id) || normalizePhone(authUser.phone) === orderPhone;
-      if (order.user_id && !isOwner) {
-        return res.status(403).json({ error: 'You do not have permission to view this order.' });
-      }
-      isVerified = isOwner;
     }
 
     const sanitizedOrder = {

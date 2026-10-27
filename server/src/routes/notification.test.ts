@@ -4,6 +4,7 @@ import { Server } from 'node:http';
 import { prisma } from '../lib/db.js';
 import app from '../index.js';
 import { ADMIN_COOKIE_NAME } from './admin.js';
+import { AUTH_COOKIE_NAME } from './auth.js';
 import {
   dispatchOrderStatusNotifications,
   setCustomSmsSender,
@@ -316,5 +317,89 @@ describe('F14: Order Tracking and Notifications API', () => {
     expect(confirmedStep.label).toBe('Order Confirmed');
     expect(confirmedStep.completed).toBe(true);
     expect(confirmedStep.timestamp).toBeDefined();
+  });
+
+  it('Logged-in customer cannot see another customer order with different user_id or phone (returns 403 Forbidden)', async () => {
+    const dhirajPhone = `98${Math.floor(10000000 + Math.random() * 90000000)}`;
+    const otherPhone = `97${Math.floor(10000000 + Math.random() * 90000000)}`;
+
+    // 1. Create User Dhiraj
+    const dhirajUser = await prisma.user.create({
+      data: {
+        phone: dhirajPhone,
+        name: 'Dhiraj Customer',
+      },
+    });
+
+    const dhirajToken = `session-dhiraj-${Date.now()}`;
+    await prisma.session.create({
+      data: {
+        user_id: dhirajUser.id,
+        token: dhirajToken,
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
+    });
+
+    try {
+      // 2. Create another user's order (User B)
+      const otherOrder = await createTestOrder({ phone: otherPhone, name: 'Other User' });
+
+      // 3. Dhiraj attempts to access Other User's order by changing the orderNo in URL
+      const res = await fetch(`${BASE_URL}/api/orders/${otherOrder.order_no}`, {
+        headers: { Cookie: `${AUTH_COOKIE_NAME}=${dhirajToken}` },
+      });
+
+      expect(res.status).toBe(403);
+      const data = await res.json();
+      expect(data.error).toBe('You do not have permission to view this order.');
+    } finally {
+      // 4. Clean up Dhiraj user and session
+      await prisma.session.deleteMany({ where: { user_id: dhirajUser.id } });
+      await prisma.user.delete({ where: { id: dhirajUser.id } }).catch(() => {});
+    }
+  });
+
+  it('Logged-in customer can access their own order (returns 200 OK)', async () => {
+    const dhirajPhone = `98${Math.floor(10000000 + Math.random() * 90000000)}`;
+
+    // 1. Create User Dhiraj
+    const dhirajUser = await prisma.user.create({
+      data: {
+        phone: dhirajPhone,
+        name: 'Dhiraj Customer Own',
+      },
+    });
+
+    const dhirajToken = `session-dhiraj-own-${Date.now()}`;
+    await prisma.session.create({
+      data: {
+        user_id: dhirajUser.id,
+        token: dhirajToken,
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
+    });
+
+    try {
+      // 2. Create Dhiraj's own order
+      const ownOrder = await createTestOrder({ phone: dhirajPhone, name: 'Dhiraj Customer Own' });
+      await prisma.order.update({
+        where: { id: ownOrder.id },
+        data: { user_id: dhirajUser.id },
+      });
+
+      // 3. Dhiraj accesses his own order
+      const res = await fetch(`${BASE_URL}/api/orders/${ownOrder.order_no}`, {
+        headers: { Cookie: `${AUTH_COOKIE_NAME}=${dhirajToken}` },
+      });
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.order.order_no).toBe(ownOrder.order_no);
+      expect(data.isVerified).toBe(true);
+    } finally {
+      // 4. Clean up Dhiraj user and session
+      await prisma.session.deleteMany({ where: { user_id: dhirajUser.id } });
+      await prisma.user.delete({ where: { id: dhirajUser.id } }).catch(() => {});
+    }
   });
 });

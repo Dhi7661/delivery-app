@@ -24,10 +24,14 @@ function OrderDetailsContent() {
       try {
         setLoading(true);
         setError(null);
-        const res = await fetch(`${API_BASE_URL}/orders/${orderNo}`);
+        const res = await fetch(`${API_BASE_URL}/orders/${orderNo}`, {
+          credentials: 'include',
+        });
         if (!res.ok) {
           if (res.status === 404) {
             setError('Order not found. Please check your order number.');
+          } else if (res.status === 403) {
+            setError('Access Denied: This order does not belong to your account.');
           } else {
             setError('Failed to load order details.');
           }
@@ -63,19 +67,33 @@ function OrderDetailsContent() {
   }
 
   if (error || !order) {
+    const isAccessDenied = error?.includes('Access Denied');
     return (
       <div className="flex min-h-[400px] flex-col items-center justify-center text-center px-4">
-        <span className="text-5xl">🔍</span>
-        <h1 className="mt-3 text-lg font-bold text-slate-800">Order Not Found</h1>
+        <span className="text-5xl">{isAccessDenied ? '🔒' : '🔍'}</span>
+        <h1 className="mt-3 text-lg font-bold text-slate-800">
+          {isAccessDenied ? 'Access Denied' : 'Order Not Found'}
+        </h1>
         <p className="mt-1 text-sm text-slate-500 max-w-xs">
           {error || 'We could not locate this order.'}
         </p>
-        <Link
-          href="/"
-          className="mt-5 flex min-h-[48px] items-center justify-center rounded-xl bg-emerald-600 px-6 font-bold text-sm text-white shadow-md hover:bg-emerald-700 active:scale-98"
-        >
-          Return Home
-        </Link>
+        <div className="mt-5 flex gap-2">
+          {isAccessDenied ? (
+            <Link
+              href="/orders"
+              className="flex min-h-[48px] items-center justify-center rounded-xl bg-emerald-600 px-6 font-bold text-sm text-white shadow-md hover:bg-emerald-700 active:scale-98"
+            >
+              View My Orders
+            </Link>
+          ) : (
+            <Link
+              href="/"
+              className="flex min-h-[48px] items-center justify-center rounded-xl bg-emerald-600 px-6 font-bold text-sm text-white shadow-md hover:bg-emerald-700 active:scale-98"
+            >
+              Return Home
+            </Link>
+          )}
+        </div>
       </div>
     );
   }
