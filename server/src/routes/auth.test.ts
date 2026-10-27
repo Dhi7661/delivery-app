@@ -199,4 +199,75 @@ describe('F07: Customer Authentication & OTP API', () => {
     });
     expect(meRes.status).toBe(401);
   });
+
+  it('Isolates cart between different users: User B never sees User A items after login', async () => {
+    const PHONE_A = '9870000001';
+    const PHONE_B = '9870000002';
+    const MOCK_CODE = '112233';
+
+    // 1. User A logs in
+    await fetch(`${BASE_URL}/api/auth/otp/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: PHONE_A, mockOtp: MOCK_CODE }),
+    });
+
+    const verifyARes = await fetch(`${BASE_URL}/api/auth/otp/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: PHONE_A, otp: MOCK_CODE }),
+    });
+    const cookieA = verifyARes.headers.get('set-cookie')!;
+
+    // 2. User A adds a product to cart
+    const product = await prisma.product.findFirst({ where: { is_active: true, is_available: true } });
+    const addRes = await fetch(`${BASE_URL}/api/cart/items`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookieA,
+      },
+      body: JSON.stringify({ productId: product!.id, qty: 3 }),
+    });
+    expect(addRes.status).toBe(200);
+    const cartA = await addRes.json();
+    expect(cartA.item_count).toBe(3);
+
+    // 3. User A logs out
+    await fetch(`${BASE_URL}/api/auth/logout`, {
+      method: 'POST',
+      headers: { Cookie: cookieA },
+    });
+
+    // 4. User B logs in
+    await fetch(`${BASE_URL}/api/auth/otp/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: PHONE_B, mockOtp: MOCK_CODE }),
+    });
+
+    const verifyBRes = await fetch(`${BASE_URL}/api/auth/otp/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: PHONE_B, otp: MOCK_CODE }),
+    });
+    const cookieB = verifyBRes.headers.get('set-cookie')!;
+
+    // 5. User B fetches their cart
+    const cartBRes = await fetch(`${BASE_URL}/api/cart`, {
+      headers: { Cookie: cookieB },
+    });
+    expect(cartBRes.status).toBe(200);
+    const cartB = await cartBRes.json();
+
+    // User B must have an empty cart, NOT User A's items!
+    expect(cartB.item_count).toBe(0);
+    expect(cartB.items).toEqual([]);
+
+    // Clean up
+    await prisma.cart.deleteMany({ where: { user: { phone: { in: [PHONE_A, PHONE_B] } } } });
+    await prisma.user.deleteMany({ where: { phone: { in: [PHONE_A, PHONE_B] } } });
+    await prisma.otpVerification.deleteMany({ where: { phone: { in: [PHONE_A, PHONE_B] } } });
+  });
 });
+

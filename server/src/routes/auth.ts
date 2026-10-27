@@ -244,7 +244,7 @@ authRouter.post('/auth/otp/verify', async (req: Request, res: Response) => {
       },
     });
 
-    // Set secure httpOnly cookie
+    // Set secure httpOnly auth cookie
     res.cookie(AUTH_COOKIE_NAME, sessionToken, {
       httpOnly: true,
       sameSite: 'lax',
@@ -252,6 +252,64 @@ authRouter.post('/auth/otp/verify', async (req: Request, res: Response) => {
       maxAge: 30 * 24 * 60 * 60 * 1000,
       path: '/',
     });
+
+    // Synchronize / isolate user cart
+    const cookieCartToken = req.cookies?.['cart_token'];
+    let userCart = await prisma.cart.findUnique({
+      where: { user_id: user.id },
+      include: { items: true },
+    });
+
+    if (cookieCartToken) {
+      const guestCart = await prisma.cart.findUnique({
+        where: { token: cookieCartToken },
+        include: { items: true },
+      });
+
+      if (guestCart && !guestCart.user_id) {
+        if (!userCart) {
+          // Claim guest cart for this user
+          userCart = await prisma.cart.update({
+            where: { id: guestCart.id },
+            data: { user_id: user.id },
+            include: { items: true },
+          });
+        } else if (guestCart.id !== userCart.id) {
+          // Merge guest cart items into existing user cart
+          for (const gItem of guestCart.items) {
+            const existingItem = userCart.items.find((i) => i.product_id === gItem.product_id);
+            if (existingItem) {
+              await prisma.cartItem.update({
+                where: { id: existingItem.id },
+                data: { qty: existingItem.qty + gItem.qty },
+              });
+            } else {
+              await prisma.cartItem.create({
+                data: {
+                  cart_id: userCart.id,
+                  product_id: gItem.product_id,
+                  qty: gItem.qty,
+                },
+              });
+            }
+          }
+          await prisma.cart.delete({ where: { id: guestCart.id } });
+        }
+      }
+    }
+
+    if (userCart) {
+      res.cookie('cart_token', userCart.token, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        path: '/',
+      });
+    } else {
+      // Clear previous user's cart cookie so new user starts with their own fresh cart
+      res.clearCookie('cart_token', { path: '/' });
+    }
 
     res.status(200).json({
       success: true,
@@ -341,6 +399,9 @@ authRouter.post('/auth/logout', async (req: Request, res: Response) => {
     }
 
     res.clearCookie(AUTH_COOKIE_NAME, {
+      path: '/',
+    });
+    res.clearCookie('cart_token', {
       path: '/',
     });
 

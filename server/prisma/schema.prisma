@@ -70,6 +70,7 @@ model User {
   orders     Order[]
   tickets    SupportTicket[]
   sessions   Session[]
+  cart       Cart?
 
   @@map("users")
 }
@@ -409,9 +410,12 @@ model Setting {
 model Cart {
   id         String     @id @default(uuid())
   token      String     @unique
+  user_id    String?    @unique
   created_at DateTime   @default(now())
   updated_at DateTime   @updatedAt
   items      CartItem[]
+
+  user       User?      @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("carts")
 }
