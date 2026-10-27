@@ -91,7 +91,7 @@ model Address {
 
 model Shop {
   id              String          @id @default(uuid())
-  name            String
+  name            String          @unique
   owner_name      String
   phone           String
   gstin           String?
@@ -125,7 +125,7 @@ model ShopBankRef {
 
 model Category {
   id         String     @id @default(uuid())
-  name       String
+  name       String     @unique
   parent_id  String?
   sort_order Int        @default(0)
   is_active  Boolean    @default(true)
@@ -160,6 +160,7 @@ model Product {
   price_history      PriceHistory[]
   order_items        OrderItem[]
 
+  @@unique([shop_id, name, unit_size])
   @@index([shop_id, is_available])
   @@map("products")
 }
