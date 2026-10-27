@@ -1,5 +1,6 @@
 import process from 'node:process';
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 import {
   DUMMY_SHOPS,
   DUMMY_CATEGORIES,
@@ -178,8 +179,33 @@ export async function seedCatalog(customProducts?: DummyProduct[]) {
   console.log(`[Seed] Seeded ${shopMap.size} shops, ${categoryMap.size} categories, and ${productsToSeed.length} products.`);
 }
 
+export async function seedAdminUser() {
+  console.log('[Seed] Seeding admin user...');
+  const email = (process.env.ADMIN_DEFAULT_EMAIL || 'admin@plukit.in').toLowerCase().trim();
+  const rawPassword = process.env.ADMIN_INITIAL_PASSWORD || 'Admin@Plukit2026!';
+  const password_hash = await bcrypt.hash(rawPassword, 10);
+
+  const admin = await prisma.adminUser.upsert({
+    where: { email },
+    update: {
+      password_hash,
+      is_active: true,
+    },
+    create: {
+      email,
+      name: 'PlukIt Administrator',
+      password_hash,
+      is_active: true,
+    },
+  });
+
+  console.log(`[Seed] Seeded admin user: ${admin.email}`);
+  return admin;
+}
+
 export async function main() {
   await seedCatalog();
+  await seedAdminUser();
 }
 
 if (process.argv[1] && process.argv[1].endsWith('seed.ts')) {

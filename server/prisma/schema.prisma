@@ -100,6 +100,34 @@ model OtpVerification {
   @@map("otp_verifications")
 }
 
+model AdminUser {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  name          String?
+  password_hash String
+  is_active     Boolean        @default(true)
+  last_login_at DateTime?
+  created_at    DateTime       @default(now())
+  updated_at    DateTime       @updatedAt
+
+  sessions      AdminSession[]
+
+  @@map("admin_users")
+}
+
+model AdminSession {
+  id            String    @id @default(uuid())
+  admin_user_id String
+  token         String    @unique
+  expires_at    DateTime
+  created_at    DateTime  @default(now())
+
+  admin_user    AdminUser @relation(fields: [admin_user_id], references: [id], onDelete: Cascade)
+
+  @@index([admin_user_id])
+  @@map("admin_sessions")
+}
+
 model Address {
   id         String   @id @default(uuid())
   user_id    String
