@@ -95,8 +95,14 @@ export async function buildCartResponse(cartId: string) {
     free_delivery_message = 'Free delivery unlocked!';
   }
 
+  const uniqueShopNames = Array.from(new Set(items.map((i) => i.product.shop.name)));
   const primaryShopId = items[0]?.product.shop_id || null;
-  const primaryShopName = items[0]?.product.shop.name || null;
+  const primaryShopName =
+    uniqueShopNames.length === 0
+      ? null
+      : uniqueShopNames.length === 1
+        ? uniqueShopNames[0]
+        : `${uniqueShopNames.length} Partner Shops`;
 
   return {
     id: cartId,
@@ -163,31 +169,6 @@ cartRouter.post('/cart/items', async (req: Request, res: Response) => {
     }
 
     const cart = await getOrCreateCart(req, res);
-
-    // Single shop rule: check existing items in this cart
-    const existingItemFromOtherShop = await prisma.cartItem.findFirst({
-      where: {
-        cart_id: cart.id,
-        product: {
-          shop_id: { not: product.shop_id },
-        },
-      },
-      include: {
-        product: {
-          include: { shop: true },
-        },
-      },
-    });
-
-    if (existingItemFromOtherShop) {
-      return res.status(409).json({
-        error: 'Your cart has items from another shop. Empty the cart?',
-        conflictShopId: product.shop_id,
-        newShopName: product.shop.name,
-        existingShopId: existingItemFromOtherShop.product.shop_id,
-        existingShopName: existingItemFromOtherShop.product.shop.name,
-      });
-    }
 
     // Upsert cart item
     const existingCartItem = await prisma.cartItem.findUnique({

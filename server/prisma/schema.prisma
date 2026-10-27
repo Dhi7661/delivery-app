@@ -39,6 +39,7 @@ enum PaymentMethod {
 
 enum PaymentStatus {
   PENDING
+  PENDING_COLLECTION
   SUCCESS
   FAILED
   REFUNDED

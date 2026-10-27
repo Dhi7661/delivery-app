@@ -80,8 +80,8 @@ export default function CartPage() {
                 <div key={item.id} className="py-3 first:pt-1 last:pb-1 flex flex-col gap-2">
                   <div className="flex items-start justify-between gap-2 min-w-0">
                     <div className="flex flex-col min-w-0 flex-1">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                        {item.brand} • {item.unit_size}
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 truncate">
+                        {item.brand} • {item.unit_size} {item.shop_name && `• ${item.shop_name}`}
                       </span>
                       <h2 className="text-sm font-bold text-slate-800 leading-snug truncate">
                         {item.name}
