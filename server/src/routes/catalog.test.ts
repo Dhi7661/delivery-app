@@ -1,14 +1,22 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { Server } from 'node:http';
 import { prisma } from '../lib/db.js';
 import { seedCatalog } from '../../prisma/seed.js';
+import app from '../index.js';
 
-const BASE_URL = 'http://localhost:4000';
+let server: Server;
+let BASE_URL = 'http://localhost:4002';
 
 describe('F03: Catalog API', () => {
   let activeCategoryId: string;
   let inactiveProductId: string;
 
   beforeAll(async () => {
+    // Start test server
+    await new Promise<void>((resolve) => {
+      server = app.listen(4002, () => resolve());
+    });
+
     // Seed initial catalog data
     await seedCatalog();
 
@@ -51,6 +59,9 @@ describe('F03: Catalog API', () => {
     // Clean up test inactive product
     await prisma.product.deleteMany({
       where: { id: inactiveProductId },
+    });
+    await new Promise<void>((resolve) => {
+      server.close(() => resolve());
     });
     await prisma.$disconnect();
   });

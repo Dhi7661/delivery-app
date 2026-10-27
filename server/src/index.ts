@@ -1,9 +1,11 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import { prisma } from './lib/db.js';
 import { BRAND_NAME } from './lib/brand.js';
 import { catalogRouter } from './routes/catalog.js';
+import { cartRouter } from './routes/cart.js';
 
 dotenv.config();
 
@@ -15,10 +17,12 @@ app.use(cors({
   credentials: true,
 }));
 
+app.use(cookieParser());
 app.use(express.json());
 
-// Catalog API routes
+// API routes
 app.use('/api', catalogRouter);
+app.use('/api', cartRouter);
 
 // API v1 Health Check with DB connectivity test
 app.get('/api/v1/health', async (_req: Request, res: Response) => {
@@ -52,9 +56,11 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`[${BRAND_NAME} Backend] Server running on port ${PORT}`);
-  console.log(`[${BRAND_NAME} Backend] Health check available at http://localhost:${PORT}/api/v1/health`);
-});
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`[${BRAND_NAME} Backend] Server running on port ${PORT}`);
+    console.log(`[${BRAND_NAME} Backend] Health check available at http://localhost:${PORT}/api/v1/health`);
+  });
+}
 
 export default app;

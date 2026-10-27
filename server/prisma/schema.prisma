@@ -159,6 +159,7 @@ model Product {
   category           Category       @relation(fields: [category_id], references: [id])
   price_history      PriceHistory[]
   order_items        OrderItem[]
+  cart_items         CartItem[]
 
   @@unique([shop_id, name, unit_size])
   @@index([shop_id, is_available])
@@ -374,5 +375,30 @@ model Setting {
   updated_at  DateTime @updatedAt
 
   @@map("settings")
+}
+
+model Cart {
+  id         String     @id @default(uuid())
+  token      String     @unique
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+  items      CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id         String   @id @default(uuid())
+  cart_id    String
+  product_id String
+  qty        Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  cart       Cart     @relation(fields: [cart_id], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [product_id], references: [id])
+
+  @@unique([cart_id, product_id])
+  @@map("cart_items")
 }
 
