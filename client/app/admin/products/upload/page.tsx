@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import AdminHeader from '@/components/AdminHeader';
 import { API_BASE_URL } from '@/lib/api';
 
 interface AdminProfile {
@@ -185,35 +186,7 @@ export default function AdminProductUploadPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 antialiased pb-20">
-      {/* Admin Top Navigation Bar */}
-      <header className="sticky top-0 z-30 bg-slate-900 text-white border-b border-slate-800 px-4 py-3 shadow-md">
-        <div className="mx-auto max-w-lg flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Link href="/" className="flex items-center gap-2">
-              <span className="w-7 h-7 bg-emerald-500 rounded-lg flex items-center justify-center font-black text-white text-sm">
-                P
-              </span>
-              <span className="font-extrabold text-base tracking-tight">PlukIt</span>
-            </Link>
-            <span className="px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-full text-[10px] font-black uppercase tracking-wider">
-              Admin
-            </span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-300 font-medium hidden sm:inline-block truncate max-w-[150px]">
-              {admin?.email}
-            </span>
-            <button
-              onClick={handleLogout}
-              disabled={loggingOut}
-              className="px-3 py-1.5 min-h-[36px] bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg transition-colors border border-slate-700"
-            >
-              {loggingOut ? 'Logging out...' : 'Sign Out'}
-            </button>
-          </div>
-        </div>
-      </header>
+      <AdminHeader adminEmail={admin?.email} activeTab="products" />
 
       <main className="mx-auto w-full max-w-lg flex-1 px-3 py-4 space-y-4">
         {/* Page Banner / Header */}

@@ -25,12 +25,15 @@ describe('F07: Customer Authentication & OTP API', () => {
     // Clean up test data
     await prisma.otpVerification.deleteMany({ where: { phone: TEST_PHONE } });
     await prisma.user.deleteMany({ where: { phone: TEST_PHONE } });
+    await prisma.auditLog.deleteMany({ where: { entity_id: TEST_PHONE } });
   });
 
   afterAll(async () => {
     // Clean up
     await prisma.otpVerification.deleteMany({ where: { phone: TEST_PHONE } });
     await prisma.user.deleteMany({ where: { phone: TEST_PHONE } });
+    await prisma.auditLog.deleteMany({ where: { entity_id: TEST_PHONE } });
+
 
     await new Promise<void>((resolve) => {
       server.close(() => resolve());

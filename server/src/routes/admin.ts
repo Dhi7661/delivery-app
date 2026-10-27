@@ -2,8 +2,15 @@ import { Router, Request, Response, NextFunction } from 'express';
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { OrderStatus, Prisma } from '@prisma/client';
 import { prisma } from '../lib/db.js';
 import { validateAndParseProductCsv } from '../lib/csvParser.js';
+import {
+  isValidStatusTransition,
+  getNextAllowedStatuses,
+  requiresCancellationReason,
+  STATUS_LABELS,
+} from '../lib/orderStatus.js';
 
 export const adminRouter = Router();
 
@@ -406,3 +413,282 @@ adminRouter.post('/admin/products/upload', requireAdminAuth, async (req: Request
     res.status(500).json({ error: error.message || 'Failed to upload and process product CSV' });
   }
 });
+
+// ==========================================
+// F12: Admin Order Board & Status Rules
+// ==========================================
+
+/**
+ * GET /api/admin/orders
+ * Returns orders with counts grouped by status, with date and search filtering.
+ */
+adminRouter.get('/admin/orders', requireAdminAuth, async (req: Request, res: Response) => {
+  try {
+    const { status, date, search } = req.query;
+
+    const where: Prisma.OrderWhereInput = {};
+
+    // 1. Status Filter
+    if (status && typeof status === 'string' && status !== 'ALL' && Object.values(OrderStatus).includes(status as OrderStatus)) {
+      where.status = status as OrderStatus;
+    }
+
+    // 2. Date Filter (YYYY-MM-DD)
+    if (date && typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      const startOfDay = new Date(`${date}T00:00:00.000Z`);
+      const endOfDay = new Date(`${date}T23:59:59.999Z`);
+      where.created_at = {
+        gte: startOfDay,
+        lte: endOfDay,
+      };
+    }
+
+    // 3. Search Filter (order_no, phone, name)
+    if (search && typeof search === 'string' && search.trim()) {
+      const q = search.trim();
+      where.OR = [
+        { order_no: { contains: q, mode: 'insensitive' } },
+        { guest_phone: { contains: q } },
+        { guest_name: { contains: q, mode: 'insensitive' } },
+      ];
+    }
+
+    // Fetch filtered orders
+    const orders = await prisma.order.findMany({
+      where,
+      orderBy: { created_at: 'desc' },
+      include: {
+        items: {
+          include: {
+            product: { select: { id: true, name: true, brand: true, unit_size: true } },
+            shop: { select: { id: true, name: true } },
+          },
+        },
+        delivery: true,
+        user: { select: { id: true, name: true, phone: true } },
+      },
+    });
+
+    // Compute status counts (using date filter if provided, for board accuracy)
+    const countWhere: Prisma.OrderWhereInput = {};
+    if (where.created_at) countWhere.created_at = where.created_at;
+
+    const allCounts = await prisma.order.groupBy({
+      by: ['status'],
+      _count: { id: true },
+      where: countWhere,
+    });
+
+    const counts: Record<string, number> = { total: 0 };
+    for (const s of Object.values(OrderStatus)) {
+      counts[s] = 0;
+    }
+
+    for (const group of allCounts) {
+      counts[group.status] = group._count.id;
+      counts.total += group._count.id;
+    }
+
+    // Attach allowed transitions to each order
+    const enrichedOrders = orders.map((order) => ({
+      ...order,
+      allowedTransitions: getNextAllowedStatuses(order.status),
+    }));
+
+    res.status(200).json({
+      success: true,
+      orders: enrichedOrders,
+      counts,
+      statuses: Object.keys(STATUS_LABELS),
+    });
+  } catch (error: any) {
+    console.error('Error fetching admin orders:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch admin orders' });
+  }
+});
+
+/**
+ * GET /api/admin/orders/:id
+ * Returns single order detail, full items, delivery info, allowed transitions, and audit history.
+ */
+adminRouter.get('/admin/orders/:id', requireAdminAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const order = await prisma.order.findFirst({
+      where: {
+        OR: [{ id }, { order_no: id }],
+      },
+      include: {
+        items: {
+          include: {
+            product: true,
+            shop: true,
+          },
+        },
+        delivery: true,
+        user: true,
+      },
+    });
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    // Fetch audit history for this order
+    const auditLogs = await prisma.auditLog.findMany({
+      where: {
+        entity: 'orders',
+        entity_id: order.id,
+      },
+      orderBy: { created_at: 'desc' },
+    });
+
+    res.status(200).json({
+      success: true,
+      order: {
+        ...order,
+        allowedTransitions: getNextAllowedStatuses(order.status),
+      },
+      auditLogs,
+    });
+  } catch (error: any) {
+    console.error('Error fetching admin order detail:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch order details' });
+  }
+});
+
+const UpdateOrderStatusSchema = z.object({
+  status: z.nativeEnum(OrderStatus, { errorMap: () => ({ message: 'Invalid order status' }) }),
+  reason: z.string().trim().optional(),
+});
+
+/**
+ * PATCH /api/admin/orders/:id/status
+ * Transitions an order to a new status obeying the strict state machine rules.
+ * Records every status change into audit_logs.
+ */
+adminRouter.patch('/admin/orders/:id/status', requireAdminAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const adminUser = (req as any).adminUser;
+
+    const parseResult = UpdateOrderStatusSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ error: parseResult.error.errors[0]?.message });
+    }
+
+    const { status: targetStatus, reason } = parseResult.data;
+
+    // 1. Fetch current order
+    const order = await prisma.order.findFirst({
+      where: {
+        OR: [{ id }, { order_no: id }],
+      },
+      include: { delivery: true },
+    });
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    // 2. State Machine Validation
+    if (!isValidStatusTransition(order.status, targetStatus)) {
+      return res.status(400).json({
+        error: `Invalid status transition from ${order.status} to ${targetStatus}`,
+        currentStatus: order.status,
+        targetStatus,
+        allowedTransitions: getNextAllowedStatuses(order.status),
+      });
+    }
+
+    // 3. Reason requirement for cancellation after packed / delivery fail
+    if (requiresCancellationReason(order.status, targetStatus)) {
+      if (!reason || reason.trim().length === 0) {
+        return res.status(400).json({
+          error: `A cancellation reason is required when cancelling an order in status ${order.status}`,
+        });
+      }
+    }
+
+    // 4. Update in database transaction with audit log
+    const updatedOrder = await prisma.$transaction(async (tx) => {
+      // Update delivery record if applicable
+      if (order.delivery) {
+        if (targetStatus === 'OUT_FOR_DELIVERY') {
+          await tx.delivery.update({
+            where: { id: order.delivery.id },
+            data: { status: 'OUT_FOR_DELIVERY' },
+          });
+        } else if (targetStatus === 'DELIVERED') {
+          await tx.delivery.update({
+            where: { id: order.delivery.id },
+            data: {
+              status: 'DELIVERED',
+              delivered_at: new Date(),
+              cod_collected_paise: order.total_paise,
+            },
+          });
+        } else if (targetStatus === 'FAILED_DELIVERY') {
+          await tx.delivery.update({
+            where: { id: order.delivery.id },
+            data: {
+              status: 'FAILED',
+              failure_reason: reason || 'Delivery Failed',
+            },
+          });
+        }
+      }
+
+      // Update order status and fetch with updated delivery
+      const updated = await tx.order.update({
+        where: { id: order.id },
+        data: {
+          status: targetStatus,
+          payment_status: targetStatus === 'DELIVERED' ? 'SUCCESS' : order.payment_status,
+        },
+        include: {
+          items: {
+            include: {
+              product: true,
+              shop: true,
+            },
+          },
+          delivery: true,
+          user: true,
+        },
+      });
+
+
+      // Record audit log
+      await tx.auditLog.create({
+        data: {
+          actor_id: adminUser?.id || 'admin',
+          action: 'ORDER_STATUS_UPDATE',
+          entity: 'orders',
+          entity_id: order.id,
+          old_value: { status: order.status },
+          new_value: {
+            status: targetStatus,
+            reason: reason || null,
+          },
+        },
+      });
+
+      return updated;
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Order ${order.order_no} status updated to ${targetStatus}`,
+      order: {
+        ...updatedOrder,
+        allowedTransitions: getNextAllowedStatuses(updatedOrder.status),
+      },
+    });
+  } catch (error: any) {
+    console.error('Error updating order status:', error);
+    res.status(500).json({ error: error.message || 'Failed to update order status' });
+  }
+});
+
