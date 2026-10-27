@@ -27,15 +27,16 @@ const CheckoutSchema = z.object({
     .string()
     .trim()
     .regex(/^[6-9]\d{9}$/, 'Please enter a valid 10-digit Indian mobile number'),
-  address: z.string().trim().min(5, 'Address line must be at least 5 characters'),
+  address: z.string().trim().min(5, 'Address line must be at least 5 characters').optional(),
   landmark: z.string().trim().optional(),
-  pincode: z.string().trim().regex(/^\d{6}$/, 'Pincode must be exactly 6 digits'),
+  pincode: z.string().trim().regex(/^\d{6}$/, 'Pincode must be exactly 6 digits').optional(),
+  addressId: z.string().uuid().optional(),
   idempotencyKey: z.string().min(5, 'idempotencyKey is required'),
 });
 
 /**
  * POST /api/checkout
- * Guest checkout with Cash on Delivery (F06)
+ * Guest checkout or Authenticated checkout with Cash on Delivery (F06 & F11)
  *
  * Rules:
  * - One database transaction
@@ -53,7 +54,7 @@ checkoutRouter.post('/checkout', async (req: Request, res: Response) => {
       return res.status(400).json({ error: parseResult.error.errors[0]?.message });
     }
 
-    const { name, phone, address, landmark, pincode, idempotencyKey } = parseResult.data;
+    const { name, phone, address, landmark, pincode, addressId, idempotencyKey } = parseResult.data;
 
     // Check for existing order with same idempotency key
     const existingOrder = await prisma.order.findUnique({
@@ -76,19 +77,57 @@ checkoutRouter.post('/checkout', async (req: Request, res: Response) => {
       });
     }
 
-    // 2. Check pincode against serviceable_pincodes (must be active)
+    // 2. Resolve delivery address (saved addressId, default saved address, or direct entry)
+    const authUser = await getAuthenticatedUser(req);
+    let finalAddress = address;
+    let finalLandmark = landmark;
+    let finalPincode = pincode;
+
+    if (addressId) {
+      if (!authUser) {
+        return res.status(401).json({ error: 'You must be logged in to use a saved address' });
+      }
+      const savedAddress = await prisma.address.findUnique({
+        where: { id: addressId },
+      });
+      if (!savedAddress || savedAddress.user_id !== authUser.id) {
+        return res.status(404).json({ error: 'Selected address not found or unauthorized' });
+      }
+      finalAddress = savedAddress.line1;
+      finalLandmark = savedAddress.landmark || undefined;
+      finalPincode = savedAddress.pincode;
+    } else if (!finalAddress || !finalPincode) {
+      if (authUser) {
+        const defaultAddr = await prisma.address.findFirst({
+          where: { user_id: authUser.id, is_default: true },
+        });
+        if (defaultAddr) {
+          finalAddress = defaultAddr.line1;
+          finalLandmark = defaultAddr.landmark || undefined;
+          finalPincode = defaultAddr.pincode;
+        }
+      }
+    }
+
+    if (!finalAddress || finalAddress.length < 5) {
+      return res.status(400).json({ error: 'Address line must be at least 5 characters' });
+    }
+    if (!finalPincode || !/^\d{6}$/.test(finalPincode)) {
+      return res.status(400).json({ error: 'Pincode must be exactly 6 digits' });
+    }
+
+    // 3. Check pincode against serviceable_pincodes (must be active)
     const serviceablePincode = await prisma.serviceablePincode.findUnique({
-      where: { pincode },
+      where: { pincode: finalPincode },
     });
 
     if (!serviceablePincode || !serviceablePincode.is_active) {
       return res.status(400).json({
-        error: `Sorry, we do not deliver to pincode ${pincode} yet. PlukIt is currently serving pincode 411001.`,
+        error: `Sorry, we do not deliver to pincode ${finalPincode} yet. PlukIt is currently serving pincode 411001.`,
       });
     }
 
-    // 3. Read cart (by authenticated user or cookie token)
-    const authUser = await getAuthenticatedUser(req);
+    // 4. Read cart (by authenticated user or cookie token)
     let cart: CartWithItems | null = null;
 
     if (authUser) {
@@ -180,9 +219,9 @@ checkoutRouter.post('/checkout', async (req: Request, res: Response) => {
           guest_name: name,
           guest_phone: phone,
           address: {
-            line1: address,
-            landmark: landmark || null,
-            pincode,
+            line1: finalAddress,
+            landmark: finalLandmark || null,
+            pincode: finalPincode,
           },
           status: 'CONFIRMED',
           subtotal_paise,

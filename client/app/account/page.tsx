@@ -147,6 +147,26 @@ export default function AccountPage() {
               </Link>
 
               <Link
+                href="/account/addresses"
+                className="flex items-center justify-between p-3.5 hover:bg-slate-50 rounded-xl transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-base">
+                    📍
+                  </span>
+                  <div>
+                    <span className="text-sm font-bold text-slate-800 block">
+                      Saved Addresses
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      Manage delivery locations (up to 5)
+                    </span>
+                  </div>
+                </div>
+                <span className="text-slate-400 text-lg">&rsaquo;</span>
+              </Link>
+
+              <Link
                 href="/cart"
                 className="flex items-center justify-between p-3.5 hover:bg-slate-50 rounded-xl transition-colors"
               >
