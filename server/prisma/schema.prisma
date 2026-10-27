@@ -333,6 +333,7 @@ model Delivery {
   delivered_at        DateTime?
   failure_reason      String?
   proof_url           String?
+  cash_note           String?
 
   order               Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
 

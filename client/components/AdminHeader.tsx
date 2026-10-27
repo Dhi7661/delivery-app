@@ -7,7 +7,7 @@ import { API_BASE_URL } from '@/lib/api';
 
 interface AdminHeaderProps {
   adminEmail?: string;
-  activeTab?: 'orders' | 'products';
+  activeTab?: 'orders' | 'deliveries' | 'products';
 }
 
 export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps) {
@@ -29,7 +29,13 @@ export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps)
     }
   };
 
-  const currentTab = activeTab || (pathname?.includes('/admin/products') ? 'products' : 'orders');
+  const currentTab =
+    activeTab ||
+    (pathname?.includes('/admin/deliveries')
+      ? 'deliveries'
+      : pathname?.includes('/admin/products')
+      ? 'products'
+      : 'orders');
 
   return (
     <header className="sticky top-0 z-30 bg-slate-900 text-white border-b border-slate-800 shadow-md">
@@ -64,22 +70,34 @@ export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps)
       </div>
 
       {/* Admin Navigation Tabs */}
-      <div className="mx-auto max-w-lg px-4 flex gap-2 border-t border-slate-800/80 text-xs font-bold">
+      <div className="mx-auto max-w-lg px-3 flex gap-1 border-t border-slate-800/80 text-xs font-bold overflow-x-auto scrollbar-none">
         <Link
           href="/admin/orders"
-          className={`py-2.5 px-3 border-b-2 flex items-center gap-1.5 transition-colors ${
+          className={`py-2.5 px-2.5 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[42px] ${
             currentTab === 'orders'
               ? 'border-emerald-500 text-emerald-400'
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
           <span>📦</span>
-          <span>Orders Board</span>
+          <span>Orders</span>
+        </Link>
+
+        <Link
+          href="/admin/deliveries"
+          className={`py-2.5 px-2.5 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[42px] ${
+            currentTab === 'deliveries'
+              ? 'border-emerald-500 text-emerald-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <span>🛵</span>
+          <span>Deliveries &amp; Cash</span>
         </Link>
 
         <Link
           href="/admin/products/upload"
-          className={`py-2.5 px-3 border-b-2 flex items-center gap-1.5 transition-colors ${
+          className={`py-2.5 px-2.5 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[42px] ${
             currentTab === 'products'
               ? 'border-emerald-500 text-emerald-400'
               : 'border-transparent text-slate-400 hover:text-slate-200'
