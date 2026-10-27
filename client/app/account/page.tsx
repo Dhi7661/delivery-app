@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
+import DevOtpBanner from '@/components/DevOtpBanner';
 import { useAuth } from '@/context/AuthContext';
 
 export default function AccountPage() {
@@ -13,6 +14,7 @@ export default function AccountPage() {
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
+  const [devOtp, setDevOtp] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [resendTimer, setResendTimer] = useState(0);
@@ -43,6 +45,9 @@ export default function AccountPage() {
     if (res.success) {
       setStep('OTP');
       setResendTimer(30);
+      if (res.debugOtp) {
+        setDevOtp(res.debugOtp);
+      }
     } else {
       setErrorMessage(res.error || 'Failed to send OTP. Please try again.');
     }
@@ -78,6 +83,9 @@ export default function AccountPage() {
     const res = await sendOtp(cleanPhone);
     if (res.success) {
       setResendTimer(30);
+      if (res.debugOtp) {
+        setDevOtp(res.debugOtp);
+      }
     } else {
       setErrorMessage(res.error || 'Failed to resend OTP.');
     }
@@ -262,6 +270,9 @@ export default function AccountPage() {
             ) : (
               /* OTP Verification Form */
               <form onSubmit={handleVerifyOtp} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-4">
+                {/* Dev Mode Helper (Auto-hidden in production; see components/DevOtpBanner.tsx) */}
+                <DevOtpBanner otp={devOtp} onAutoFill={setOtp} />
+
                 {/* Optional Name field */}
                 <div>
                   <label htmlFor="auth-name" className="block text-xs font-bold text-slate-700 mb-1">

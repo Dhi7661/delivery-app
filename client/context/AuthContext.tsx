@@ -6,7 +6,7 @@ import { API_BASE_URL, UserData } from '@/lib/api';
 interface AuthContextType {
   user: UserData | null;
   loading: boolean;
-  sendOtp: (phone: string) => Promise<{ success: boolean; error?: string }>;
+  sendOtp: (phone: string) => Promise<{ success: boolean; error?: string; debugOtp?: string }>;
   verifyOtp: (phone: string, otp: string, name?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: data.error || 'Failed to send OTP' };
       }
 
-      return { success: true };
+      return { success: true, debugOtp: data.debugOtp };
     } catch (err) {
       console.error('sendOtp error:', err);
       return { success: false, error: 'Network error. Please try again.' };

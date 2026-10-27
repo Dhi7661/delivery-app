@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import crypto from 'node:crypto';
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
+import { sendOtpSms } from '../lib/sms.js';
 
 export const authRouter = Router();
 
@@ -121,14 +122,17 @@ authRouter.post('/auth/otp/send', async (req: Request, res: Response) => {
       },
     });
 
-    // In dev / test, log the OTP for inspection
-    console.log(`[PlukIt Auth] Generated OTP for ${phone}: ${otp}`);
+    // Dispatch OTP via isolated SMS service
+    const smsResult = await sendOtpSms(phone, otp);
+    if (!smsResult.success) {
+      return res.status(500).json({ error: smsResult.error || 'Failed to send OTP. Please try again.' });
+    }
 
     res.status(200).json({
       success: true,
       message: 'OTP sent successfully to your mobile number.',
       expiresInSeconds: 300,
-      ...(process.env.NODE_ENV === 'test' ? { debugOtp: otp } : {}),
+      ...(smsResult.debugOtp ? { debugOtp: smsResult.debugOtp } : {}),
     });
   } catch (error) {
     console.error('Send OTP error:', error);
