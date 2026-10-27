@@ -1,10 +1,23 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/db.js';
 import { CART_COOKIE_NAME } from './cart.js';
 import { calculateDeliveryFee, isCodAllowed } from '../lib/pricing.js';
 import { getNextOrderNumber } from '../lib/order.js';
 import { getAuthenticatedUser } from './auth.js';
+
+type CartWithItems = Prisma.CartGetPayload<{
+  include: {
+    items: {
+      include: {
+        product: {
+          include: { shop: true };
+        };
+      };
+    };
+  };
+}>;
 
 export const checkoutRouter = Router();
 
@@ -76,7 +89,7 @@ checkoutRouter.post('/checkout', async (req: Request, res: Response) => {
 
     // 3. Read cart (by authenticated user or cookie token)
     const authUser = await getAuthenticatedUser(req);
-    let cart: any = null;
+    let cart: CartWithItems | null = null;
 
     if (authUser) {
       cart = await prisma.cart.findUnique({
