@@ -202,11 +202,13 @@ export default function AdminOrdersPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-base font-extrabold text-slate-900">Orders Board</h1>
-              <p className="text-xs text-slate-400">Manage orders and transition stages</p>
+              <p className="text-xs text-slate-400">
+                {counts.total || 0} total orders &bull; Pune Camp
+              </p>
             </div>
             <button
               onClick={() => fetchOrders()}
-              className="p-2 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg min-h-[36px] flex items-center gap-1 transition-colors"
+              className="px-3 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg min-h-[36px] flex items-center gap-1 transition-colors cursor-pointer"
               title="Refresh Orders"
             >
               <span>🔄</span>
@@ -214,37 +216,41 @@ export default function AdminOrdersPage() {
             </button>
           </div>
 
-          {/* Search & Date Controls */}
-          <div className="flex gap-2">
-            <div className="flex-1 relative">
-              <input
-                type="text"
-                placeholder="Search order #, phone, name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 focus:outline-hidden min-h-[40px]"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-2.5 text-xs text-slate-400 hover:text-slate-600"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-
+          {/* Search Input */}
+          <div className="relative">
             <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="rounded-xl border border-slate-200 px-2 py-2 text-xs font-medium text-slate-700 focus:border-emerald-600 focus:outline-hidden min-h-[40px]"
-              title="Filter by order date"
+              type="text"
+              placeholder="Search order #, customer phone, name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 focus:outline-hidden min-h-[40px]"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-2.5 text-xs text-slate-400 hover:text-slate-600"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Date Filter & Status Dropdown Controls */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 flex items-center gap-1.5 rounded-xl border border-slate-200 px-2.5 py-1 bg-slate-50 min-h-[40px]">
+              <span className="text-xs text-slate-400">📅</span>
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="w-full bg-transparent text-xs font-medium text-slate-700 focus:outline-hidden"
+                title="Filter by order date"
+              />
+            </div>
             {dateFilter && (
               <button
                 onClick={() => setDateFilter('')}
-                className="px-2 text-xs font-bold text-slate-500 hover:text-rose-600"
+                className="px-2.5 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl min-h-[40px] border border-rose-200"
                 title="Clear date filter"
               >
                 Clear Date
@@ -253,34 +259,55 @@ export default function AdminOrdersPage() {
           </div>
         </div>
 
-        {/* Status Filter Tab Pills */}
-        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
-          {FILTER_TABS.map((tab) => {
-            const isSelected = selectedStatus === tab.id;
-            const count = tab.id === 'ALL' ? counts.total || 0 : counts[tab.id] || 0;
-            return (
+        {/* Status Filter Tabs - 2-row Responsive Grid so all 8 stages are 100% visible on screen */}
+        <div className="rounded-2xl bg-white border border-slate-200 p-2.5 shadow-2xs space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Filter By Stage
+            </span>
+            {selectedStatus !== 'ALL' && (
               <button
-                key={tab.id}
-                onClick={() => setSelectedStatus(tab.id)}
-                className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all min-h-[40px] cursor-pointer ${
-                  isSelected
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-                }`}
+                onClick={() => setSelectedStatus('ALL')}
+                className="text-[11px] font-bold text-emerald-700 hover:underline"
               >
-                <span>{tab.icon}</span>
-                <span>{tab.label}</span>
-                <span
-                  className={`ml-1 rounded-full px-1.5 py-0.2 text-[10px] font-black ${
-                    isSelected ? 'bg-emerald-800 text-emerald-100' : 'bg-slate-100 text-slate-700'
+                Show All ({counts.total || 0})
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-4 gap-1.5">
+            {FILTER_TABS.map((tab) => {
+              const isSelected = selectedStatus === tab.id;
+              const count = tab.id === 'ALL' ? counts.total || 0 : counts[tab.id] || 0;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setSelectedStatus(tab.id)}
+                  className={`flex flex-col items-center justify-center rounded-xl py-2 px-1 text-center transition-all min-h-[50px] cursor-pointer border ${
+                    isSelected
+                      ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs ring-2 ring-emerald-600'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
                   }`}
                 >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs">{tab.icon}</span>
+                    <span className="text-[11px] font-bold leading-tight">
+                      {tab.label}
+                    </span>
+                  </div>
+                  <span
+                    className={`mt-1 rounded-full px-2 py-0.2 text-[10px] font-black ${
+                      isSelected ? 'bg-emerald-800 text-emerald-100' : 'bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
+
 
         {/* Global Error Banner */}
         {actionError && (
