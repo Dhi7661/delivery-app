@@ -6,18 +6,30 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 import { formatPaise } from '@/lib/money';
-import { API_BASE_URL } from '@/lib/api';
+import { API_BASE_URL, SavedAddress } from '@/lib/api';
 
 const SERVICEABLE_PINCODE = '411001';
 const COD_MAX_LIMIT_PAISE = 100000; // ₹1,000
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cart, loading, refreshCart } = useCart();
+  const { cart, loading: cartLoading, refreshCart } = useCart();
+  const { user, loading: authLoading } = useAuth();
 
+  // Contact Info
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+
+  // Address Selection & Form
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [useCustomAddress, setUseCustomAddress] = useState(false);
+  const [saveNewAddress, setSaveNewAddress] = useState(true);
+
+  // Manual Address Fields
   const [address, setAddress] = useState('');
   const [landmark, setLandmark] = useState('');
   const [pincode, setPincode] = useState(SERVICEABLE_PINCODE);
@@ -36,13 +48,42 @@ export default function CheckoutPage() {
     }
   }, []);
 
+  // Sync user info and load saved addresses when authenticated
+  useEffect(() => {
+    if (user) {
+      if (user.name) setName(user.name);
+      if (user.phone) setPhone(user.phone.replace('+91', ''));
+
+      setLoadingAddresses(true);
+      fetch(`${API_BASE_URL}/addresses`, { credentials: 'include' })
+        .then((res) => (res.ok ? res.json() : { addresses: [] }))
+        .then((data) => {
+          const list: SavedAddress[] = data.addresses || [];
+          setSavedAddresses(list);
+          if (list.length > 0) {
+            const defaultAddr = list.find((a) => a.is_default) || list[0];
+            setSelectedAddressId(defaultAddr.id);
+            setUseCustomAddress(false);
+          } else {
+            setUseCustomAddress(true);
+          }
+        })
+        .catch((err) => console.error('Failed to load saved addresses', err))
+        .finally(() => setLoadingAddresses(false));
+    } else {
+      setSavedAddresses([]);
+      setSelectedAddressId(null);
+      setUseCustomAddress(true);
+    }
+  }, [user]);
+
   const isOverCodLimit = cart && cart.total_paise > COD_MAX_LIMIT_PAISE;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
-    // Basic frontend validations
+    // Basic contact validations
     if (!name.trim() || name.trim().length < 2) {
       setErrorMessage('Please enter your full name (minimum 2 characters).');
       return;
@@ -54,21 +95,58 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!address.trim() || address.trim().length < 5) {
-      setErrorMessage('Please enter complete delivery address (minimum 5 characters).');
-      return;
-    }
-
-    if (pincode.trim() !== SERVICEABLE_PINCODE) {
-      setErrorMessage(
-        `Sorry, PlukIt currently only delivers to Pune Camp (pincode ${SERVICEABLE_PINCODE}). Please set pincode to ${SERVICEABLE_PINCODE}.`
-      );
-      return;
-    }
-
     if (isOverCodLimit) {
       setErrorMessage('Order total exceeds the ₹1,000 Cash on Delivery limit. Please adjust items in cart.');
       return;
+    }
+
+    let payloadAddress = address.trim();
+    let payloadLandmark = landmark.trim() || undefined;
+    let payloadPincode = pincode.trim();
+    let payloadAddressId: string | undefined = undefined;
+
+    if (!useCustomAddress && selectedAddressId) {
+      const selected = savedAddresses.find((a) => a.id === selectedAddressId);
+      if (!selected) {
+        setErrorMessage('Please select a valid delivery address.');
+        return;
+      }
+      payloadAddressId = selected.id;
+      payloadAddress = selected.line1;
+      payloadLandmark = selected.landmark || undefined;
+      payloadPincode = selected.pincode;
+    } else {
+      // Validations for manual address entry
+      if (!payloadAddress || payloadAddress.length < 5) {
+        setErrorMessage('Please enter complete delivery address (minimum 5 characters).');
+        return;
+      }
+
+      if (payloadPincode !== SERVICEABLE_PINCODE) {
+        setErrorMessage(
+          `Sorry, PlukIt currently only delivers to Pune Camp (pincode ${SERVICEABLE_PINCODE}). Please set pincode to ${SERVICEABLE_PINCODE}.`
+        );
+        return;
+      }
+
+      // Auto-save address to user's address book if requested and under 5 limit
+      if (user && saveNewAddress && savedAddresses.length < 5) {
+        try {
+          await fetch(`${API_BASE_URL}/addresses`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              line1: payloadAddress,
+              landmark: payloadLandmark,
+              pincode: payloadPincode,
+              is_default: savedAddresses.length === 0,
+            }),
+          });
+        } catch (err) {
+          console.warn('Could not auto-save address to account:', err);
+        }
+      }
     }
 
     setSubmitting(true);
@@ -81,9 +159,10 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           name: name.trim(),
           phone: cleanPhone,
-          address: address.trim(),
-          landmark: landmark.trim() || undefined,
-          pincode: pincode.trim(),
+          address: payloadAddress,
+          landmark: payloadLandmark,
+          pincode: payloadPincode,
+          addressId: payloadAddressId,
           idempotencyKey,
         }),
       });
@@ -101,16 +180,18 @@ export default function CheckoutPage() {
 
       // Navigate to order confirmation
       router.push(`/order/${data.orderNumber}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Checkout error:', err);
       setErrorMessage('Network error while placing order. Please check your connection.');
       setSubmitting(false);
     }
   };
 
+  const loading = cartLoading || authLoading;
+
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 antialiased pb-24">
-      <Header showBack title="Guest Checkout" />
+      <Header showBack title={user ? 'Checkout' : 'Guest Checkout'} />
 
       <main className="mx-auto w-full max-w-md flex-1 px-3 py-3">
         {loading ? (
@@ -145,6 +226,25 @@ export default function CheckoutPage() {
               </div>
             </div>
 
+            {/* Guest Login Suggestion Banner */}
+            {!user && (
+              <div className="flex items-center justify-between gap-2 rounded-xl bg-blue-50/90 border border-blue-200 px-3.5 py-2.5 text-xs text-blue-900 shadow-2xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">📱</span>
+                  <div>
+                    <span className="font-semibold block text-slate-900">Have an account?</span>
+                    <span className="text-[11px] text-blue-700">Log in to use saved addresses &amp; faster checkout</span>
+                  </div>
+                </div>
+                <Link
+                  href="/account"
+                  className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 min-h-[36px] flex items-center justify-center"
+                >
+                  Log In
+                </Link>
+              </div>
+            )}
+
             {/* Error Message Box */}
             {errorMessage && (
               <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 flex items-start gap-2 animate-fade-in">
@@ -173,21 +273,21 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {/* Contact & Delivery Details */}
+            {/* Contact Details Card */}
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-1.5">
                 <span>👤</span>
-                <span>Delivery &amp; Contact Details</span>
+                <span>Contact Details</span>
               </h2>
 
               <div className="space-y-3.5">
                 {/* Full Name */}
                 <div>
-                  <label htmlFor="guest-name" className="block text-xs font-bold text-slate-700 mb-1">
+                  <label htmlFor="checkout-name" className="block text-xs font-bold text-slate-700 mb-1">
                     Full Name <span className="text-rose-500">*</span>
                   </label>
                   <input
-                    id="guest-name"
+                    id="checkout-name"
                     type="text"
                     required
                     value={name}
@@ -199,7 +299,7 @@ export default function CheckoutPage() {
 
                 {/* Mobile Phone */}
                 <div>
-                  <label htmlFor="guest-phone" className="block text-xs font-bold text-slate-700 mb-1">
+                  <label htmlFor="checkout-phone" className="block text-xs font-bold text-slate-700 mb-1">
                     Mobile Number <span className="text-rose-500">*</span>
                   </label>
                   <div className="flex rounded-xl border border-slate-200 overflow-hidden focus-within:border-emerald-600 focus-within:ring-1 focus-within:ring-emerald-600 min-h-[44px]">
@@ -207,7 +307,7 @@ export default function CheckoutPage() {
                       +91
                     </span>
                     <input
-                      id="guest-phone"
+                      id="checkout-phone"
                       type="tel"
                       inputMode="numeric"
                       required
@@ -219,68 +319,202 @@ export default function CheckoutPage() {
                     />
                   </div>
                   <span className="mt-1 block text-[11px] text-slate-400">
-                    We will SMS order tracking updates to this number.
+                    We will SMS order updates to this mobile number.
                   </span>
                 </div>
+              </div>
+            </div>
 
-                {/* Address */}
-                <div>
-                  <label htmlFor="guest-address" className="block text-xs font-bold text-slate-700 mb-1">
-                    Delivery Address <span className="text-rose-500">*</span>
-                  </label>
-                  <textarea
-                    id="guest-address"
-                    required
-                    rows={2}
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Flat / House No., Building Name, Street"
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-800 placeholder-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 focus:outline-hidden"
-                  />
+            {/* Delivery Address Section */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <span>📍</span>
+                  <span>Delivery Address</span>
+                </h2>
+                {user && (
+                  <Link
+                    href="/account/addresses"
+                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700 underline"
+                  >
+                    Manage
+                  </Link>
+                )}
+              </div>
+
+              {/* Saved Addresses Picker (if user is logged in and has addresses) */}
+              {user && savedAddresses.length > 0 && (
+                <div className="mb-3 space-y-2">
+                  <span className="text-xs font-semibold text-slate-600 block">
+                    Choose a saved address:
+                  </span>
+
+                  <div className="space-y-2">
+                    {savedAddresses.map((addr) => {
+                      const isSelected = !useCustomAddress && selectedAddressId === addr.id;
+                      return (
+                        <div
+                          key={addr.id}
+                          onClick={() => {
+                            setSelectedAddressId(addr.id);
+                            setUseCustomAddress(false);
+                          }}
+                          className={`cursor-pointer rounded-xl border p-3 transition-all flex items-start gap-3 min-h-[44px] ${
+                            isSelected
+                              ? 'border-emerald-600 bg-emerald-50/70 shadow-2xs ring-1 ring-emerald-600'
+                              : 'border-slate-200 bg-white hover:border-slate-300'
+                          }`}
+                        >
+                          <div
+                            className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                              isSelected
+                                ? 'border-emerald-600 bg-emerald-600 text-white'
+                                : 'border-slate-300 bg-white'
+                            }`}
+                          >
+                            {isSelected && <span className="text-[10px] leading-none">✓</span>}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-xs font-bold text-slate-800">
+                                {addr.line1}
+                              </span>
+                              {addr.is_default && (
+                                <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-emerald-800">
+                                  Default
+                                </span>
+                              )}
+                            </div>
+                            {addr.landmark && (
+                              <p className="text-[11px] text-slate-500 mt-0.5">
+                                Landmark: {addr.landmark}
+                              </p>
+                            )}
+                            <p className="text-[11px] font-medium text-emerald-700 mt-0.5">
+                              Pune Camp ({addr.pincode})
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Toggle between saved and new address */}
+                  <div className="pt-1 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextState = !useCustomAddress;
+                        setUseCustomAddress(nextState);
+                        if (!nextState) {
+                          const def = savedAddresses.find((a) => a.is_default) || savedAddresses[0];
+                          if (def) setSelectedAddressId(def.id);
+                        }
+                      }}
+                      className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 py-1 min-h-[36px]"
+                    >
+                      {useCustomAddress ? '← Use a saved address above' : '+ Deliver to another address'}
+                    </button>
+                  </div>
                 </div>
+              )}
 
-                {/* Landmark */}
-                <div>
-                  <label htmlFor="guest-landmark" className="block text-xs font-bold text-slate-700 mb-1">
-                    Landmark <span className="text-slate-400 font-normal">(Optional)</span>
-                  </label>
-                  <input
-                    id="guest-landmark"
-                    type="text"
-                    value={landmark}
-                    onChange={(e) => setLandmark(e.target.value)}
-                    placeholder="E.g. Near Poona Club / Opposite Market"
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 focus:outline-hidden min-h-[44px]"
-                  />
-                </div>
+              {/* Manual Address Form (shown for guests, users without saved addresses, or when custom address is active) */}
+              {(useCustomAddress || !user || savedAddresses.length === 0) && (
+                <div className="space-y-3.5 pt-1">
+                  {user && savedAddresses.length > 0 && (
+                    <div className="rounded-lg bg-slate-50 p-2 text-xs font-medium text-slate-600 border border-slate-200">
+                      Enter a new delivery address below:
+                    </div>
+                  )}
 
-                {/* Pincode */}
-                <div>
-                  <label htmlFor="guest-pincode" className="block text-xs font-bold text-slate-700 mb-1">
-                    Delivery Pincode <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    id="guest-pincode"
-                    type="text"
-                    inputMode="numeric"
-                    required
-                    maxLength={6}
-                    value={pincode}
-                    onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="411001"
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 focus:outline-hidden min-h-[44px]"
-                  />
-                  {pincode !== SERVICEABLE_PINCODE ? (
-                    <span className="mt-1 block text-[11px] font-semibold text-rose-600">
-                      ⚠️ PlukIt currently only delivers to pincode 411001.
-                    </span>
-                  ) : (
-                    <span className="mt-1 block text-[11px] text-emerald-700">
-                      ✓ Serviceable area: Pune Camp (411001)
-                    </span>
+                  {/* Address Line 1 */}
+                  <div>
+                    <label htmlFor="checkout-address" className="block text-xs font-bold text-slate-700 mb-1">
+                      Delivery Address <span className="text-rose-500">*</span>
+                    </label>
+                    <textarea
+                      id="checkout-address"
+                      required={useCustomAddress || savedAddresses.length === 0}
+                      rows={2}
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Flat / House No., Building Name, Street"
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-800 placeholder-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 focus:outline-hidden"
+                    />
+                  </div>
+
+                  {/* Landmark */}
+                  <div>
+                    <label htmlFor="checkout-landmark" className="block text-xs font-bold text-slate-700 mb-1">
+                      Landmark <span className="text-slate-400 font-normal">(Optional)</span>
+                    </label>
+                    <input
+                      id="checkout-landmark"
+                      type="text"
+                      value={landmark}
+                      onChange={(e) => setLandmark(e.target.value)}
+                      placeholder="E.g. Near Poona Club / Opposite Market"
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 focus:outline-hidden min-h-[44px]"
+                    />
+                  </div>
+
+                  {/* Pincode */}
+                  <div>
+                    <label htmlFor="checkout-pincode" className="block text-xs font-bold text-slate-700 mb-1">
+                      Delivery Pincode <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      id="checkout-pincode"
+                      type="text"
+                      inputMode="numeric"
+                      required={useCustomAddress || savedAddresses.length === 0}
+                      maxLength={6}
+                      value={pincode}
+                      onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="411001"
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 focus:outline-hidden min-h-[44px]"
+                    />
+                    {pincode !== SERVICEABLE_PINCODE ? (
+                      <span className="mt-1 block text-[11px] font-semibold text-rose-600">
+                        ⚠️ PlukIt currently only delivers to pincode 411001.
+                      </span>
+                    ) : (
+                      <span className="mt-1 block text-[11px] text-emerald-700">
+                        ✓ Serviceable area: Pune Camp (411001)
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Save to account checkbox for authenticated users */}
+                  {user && (
+                    <div className="pt-1">
+                      {savedAddresses.length < 5 ? (
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={saveNewAddress}
+                            onChange={(e) => setSaveNewAddress(e.target.checked)}
+                            className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                          />
+                          <span className="text-xs font-medium text-slate-700">
+                            Save this address to my account for future orders
+                          </span>
+                        </label>
+                      ) : (
+                        <p className="text-[11px] text-slate-500">
+                          ℹ️ Address book limit reached (5/5). You can manage saved addresses in your{' '}
+                          <Link href="/account/addresses" className="font-bold underline text-emerald-600">
+                            Account
+                          </Link>
+                          .
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Payment Method Section */}

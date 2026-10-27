@@ -119,4 +119,15 @@ export interface UserData {
   role: string;
 }
 
+export interface SavedAddress {
+  id: string;
+  user_id: string;
+  line1: string;
+  landmark: string | null;
+  pincode: string;
+  is_default: boolean;
+  created_at: string;
+}
+
+
 
