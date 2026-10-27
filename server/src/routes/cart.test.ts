@@ -119,7 +119,7 @@ describe('F04: Cart API', () => {
     expect(cart.total_paise).toBe(cart.subtotal_paise + cart.delivery_fee_paise);
   });
 
-  it('Adding from a second shop is refused with 409 conflict error', async () => {
+  it('Adding items from different shops succeeds (multi-seller cart allowed)', async () => {
     const res = await fetch(`${BASE_URL}/api/cart/items`, {
       method: 'POST',
       headers: {
@@ -129,10 +129,13 @@ describe('F04: Cart API', () => {
       body: JSON.stringify({ productId: productB1Id, qty: 1 }),
     });
 
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data.error).toContain('Your cart has items from another shop. Empty the cart?');
+    const itemFromB = data.items.find((i: { product_id: string }) => i.product_id === productB1Id);
+    expect(itemFromB).toBeDefined();
+    expect(itemFromB.shop_id).toBe(shopBId);
   });
+
 
   it('Browser-sent price fields are ignored; fresh DB price is used', async () => {
     // Attempt to send a bogus 1-paisa price from browser
