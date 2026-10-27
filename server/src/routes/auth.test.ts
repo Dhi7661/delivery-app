@@ -81,6 +81,121 @@ describe('F07: Customer Authentication & OTP API', () => {
     expect(data.error).toContain('wait a few seconds');
   });
 
+  it('Fourth code request within 10 minutes is blocked', async () => {
+    const RATE_LIMIT_PHONE = '9875566778';
+
+    // Insert 3 prior requests into audit logs within the 10-minute window
+    for (let i = 0; i < 3; i++) {
+      await prisma.auditLog.create({
+        data: {
+          actor_id: RATE_LIMIT_PHONE,
+          action: 'OTP_REQUESTED',
+          entity: 'otp_verifications',
+          entity_id: RATE_LIMIT_PHONE,
+          created_at: new Date(Date.now() - (i + 1) * 60 * 1000), // 1, 2, 3 minutes ago
+        },
+      });
+    }
+
+    // Fourth request must be blocked
+    const res = await fetch(`${BASE_URL}/api/auth/otp/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: RATE_LIMIT_PHONE }),
+    });
+
+    expect(res.status).toBe(429);
+    const data = await res.json();
+    expect(data.error).toContain('Maximum 3 requests allowed every 10 minutes');
+
+    // Clean up
+    await prisma.auditLog.deleteMany({ where: { entity_id: RATE_LIMIT_PHONE } });
+  });
+
+  it('Expired code is rejected', async () => {
+    const EXPIRED_PHONE = '9874455667';
+    // Create an expired OTP verification record
+    await prisma.otpVerification.upsert({
+      where: { phone: EXPIRED_PHONE },
+      update: {
+        otp_hash: 'dummyhash',
+        attempts: 0,
+        expires_at: new Date(Date.now() - 60 * 1000), // 1 minute ago
+      },
+      create: {
+        phone: EXPIRED_PHONE,
+        otp_hash: 'dummyhash',
+        attempts: 0,
+        expires_at: new Date(Date.now() - 60 * 1000),
+      },
+    });
+
+    const res = await fetch(`${BASE_URL}/api/auth/otp/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phone: EXPIRED_PHONE,
+        otp: '123456',
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain('OTP has expired');
+
+    // Clean up
+    await prisma.otpVerification.deleteMany({ where: { phone: EXPIRED_PHONE } });
+  });
+
+  it('Sixth wrong attempt is blocked', async () => {
+    const ATTEMPTS_PHONE = '9873344556';
+    const VALID_CODE = '556677';
+
+    // Request an OTP
+    const sendRes = await fetch(`${BASE_URL}/api/auth/otp/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: ATTEMPTS_PHONE, mockOtp: VALID_CODE }),
+    });
+    expect(sendRes.status).toBe(200);
+
+    // Attempts 1 to 4 fail
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      const res = await fetch(`${BASE_URL}/api/auth/otp/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: ATTEMPTS_PHONE, otp: '000000' }),
+      });
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toContain('attempt');
+    }
+
+    // 5th attempt fails and cancels the code
+    const fifthRes = await fetch(`${BASE_URL}/api/auth/otp/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: ATTEMPTS_PHONE, otp: '000000' }),
+    });
+    expect(fifthRes.status).toBe(400);
+    const fifthData = await fifthRes.json();
+    expect(fifthData.error).toContain('cancelled');
+
+    // 6th attempt is blocked, even if user now provides the right code!
+    const sixthRes = await fetch(`${BASE_URL}/api/auth/otp/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: ATTEMPTS_PHONE, otp: VALID_CODE }),
+    });
+    expect(sixthRes.status).toBe(400);
+    const sixthData = await sixthRes.json();
+    expect(sixthData.error).toContain('cancelled');
+
+    // Clean up
+    await prisma.otpVerification.deleteMany({ where: { phone: ATTEMPTS_PHONE } });
+    await prisma.auditLog.deleteMany({ where: { entity_id: ATTEMPTS_PHONE } });
+  });
+
   it('Rejects incorrect OTP and increments attempt counter', async () => {
     const res = await fetch(`${BASE_URL}/api/auth/otp/verify`, {
       method: 'POST',

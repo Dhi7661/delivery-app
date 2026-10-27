@@ -81,15 +81,31 @@ authRouter.post('/auth/otp/send', async (req: Request, res: Response) => {
 
     const { phone } = parseResult.data;
 
-    // Check rate limit: 60s cooldown between requests
+    // 1. Rate limit: At most 3 code requests per number in 10 minutes
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const recentRequestsCount = await prisma.auditLog.count({
+      where: {
+        action: 'OTP_REQUESTED',
+        entity: 'otp_verifications',
+        entity_id: phone,
+        created_at: { gte: tenMinutesAgo },
+      },
+    });
+
+    if (recentRequestsCount >= 3) {
+      return res.status(429).json({
+        error: 'Too many OTP requests. Maximum 3 requests allowed every 10 minutes.',
+      });
+    }
+
+    // 2. Cooldown check between immediate successive requests (15s)
     const existingOtp = await prisma.otpVerification.findUnique({
       where: { phone },
     });
 
     if (existingOtp) {
       const timeSinceLastUpdate = Date.now() - existingOtp.updated_at.getTime();
-      if (timeSinceLastUpdate < 30 * 1000) {
-        // Less than 30 seconds
+      if (timeSinceLastUpdate < 15 * 1000) {
         return res.status(429).json({
           error: 'Please wait a few seconds before requesting another OTP.',
         });
@@ -119,6 +135,17 @@ authRouter.post('/auth/otp/send', async (req: Request, res: Response) => {
         otp_hash,
         attempts: 0,
         expires_at,
+      },
+    });
+
+    // Record OTP request in audit log for rate limiting
+    await prisma.auditLog.create({
+      data: {
+        actor_id: phone,
+        action: 'OTP_REQUESTED',
+        entity: 'otp_verifications',
+        entity_id: phone,
+        new_value: { ip: req.ip || '127.0.0.1' },
       },
     });
 
@@ -173,27 +200,43 @@ authRouter.post('/auth/otp/verify', async (req: Request, res: Response) => {
       });
     }
 
+    if (record.attempts >= 5) {
+      return res.status(400).json({
+        error: 'Too many incorrect attempts. This code has been cancelled. Please request a new code.',
+      });
+    }
+
     if (record.expires_at < new Date()) {
       return res.status(400).json({
         error: 'OTP has expired. Please request a new code.',
       });
     }
 
-    if (record.attempts >= 5) {
-      return res.status(400).json({
-        error: 'Too many incorrect attempts. Please request a new code.',
-      });
-    }
-
     const expectedHash = hashOtp(phone, otp);
     if (record.otp_hash !== expectedHash) {
-      await prisma.otpVerification.update({
-        where: { phone },
-        data: { attempts: { increment: 1 } },
-      });
-      return res.status(400).json({
-        error: 'Invalid verification code. Please check and try again.',
-      });
+      const newAttempts = record.attempts + 1;
+      if (newAttempts >= 5) {
+        // Cancel the code on reaching 5 failed attempts
+        await prisma.otpVerification.update({
+          where: { phone },
+          data: {
+            attempts: newAttempts,
+            expires_at: new Date(0), // cancelled
+          },
+        });
+        return res.status(400).json({
+          error: 'Too many incorrect attempts. This code has been cancelled. Please request a new code.',
+        });
+      } else {
+        await prisma.otpVerification.update({
+          where: { phone },
+          data: { attempts: newAttempts },
+        });
+        const remaining = 5 - newAttempts;
+        return res.status(400).json({
+          error: `Invalid verification code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`,
+        });
+      }
     }
 
     // OTP verified successfully. Delete verification record
