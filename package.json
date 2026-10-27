@@ -1,7 +1,7 @@
 {
-  "name": "dashly-local-delivery",
+  "name": "plukit",
   "version": "1.0.0",
-  "description": "Dashly - Hyper-local delivery service (Client & Server)",
+  "description": "PlukIt - Hyper-local delivery service (Client & Server)",
   "private": true,
   "scripts": {
     "dev:client": "npm --prefix client run dev",

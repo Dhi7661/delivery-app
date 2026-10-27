@@ -1,4 +1,4 @@
-# Website Plan: Local Delivery Service (Dashly)
+# Website Plan: Local Delivery Service (PlukIt)
 
 Requirements, database, tech stack, security, payments, and performance.
 Document version 1.2 | Status: Draft for review | Scope: mobile-first website first, native app later.

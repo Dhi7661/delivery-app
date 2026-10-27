@@ -1,7 +1,7 @@
 {
-  "name": "delivery-app-server",
+  "name": "plukit-server",
   "version": "1.0.0",
-  "description": "Backend API server for Dashly local delivery service",
+  "description": "Backend API server for PlukIt local delivery service",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

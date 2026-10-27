@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { prisma } from './lib/db.js';
+import { BRAND_NAME } from './lib/brand.js';
 
 dotenv.config();
 
@@ -21,7 +22,7 @@ app.get('/api/v1/health', async (_req: Request, res: Response) => {
     await prisma.$queryRaw`SELECT 1`;
     res.status(200).json({
       status: 'ok',
-      service: 'Dashly Delivery Backend',
+      service: `${BRAND_NAME} Delivery Backend`,
       version: '1.0.0',
       database: 'connected (PostgreSQL)',
       timestamp: new Date().toISOString(),
@@ -29,7 +30,7 @@ app.get('/api/v1/health', async (_req: Request, res: Response) => {
   } catch (dbError) {
     res.status(503).json({
       status: 'degraded',
-      service: 'Dashly Delivery Backend',
+      service: `${BRAND_NAME} Delivery Backend`,
       version: '1.0.0',
       database: 'disconnected',
       error: dbError instanceof Error ? dbError.message : 'Unknown database error',
@@ -48,8 +49,8 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`[Dashly Backend] Server running on port ${PORT}`);
-  console.log(`[Dashly Backend] Health check available at http://localhost:${PORT}/api/v1/health`);
+  console.log(`[${BRAND_NAME} Backend] Server running on port ${PORT}`);
+  console.log(`[${BRAND_NAME} Backend] Health check available at http://localhost:${PORT}/api/v1/health`);
 });
 
 export default app;
