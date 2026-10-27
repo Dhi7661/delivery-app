@@ -4,6 +4,7 @@ import { prisma } from '../lib/db.js';
 import { CART_COOKIE_NAME } from './cart.js';
 import { calculateDeliveryFee, isCodAllowed } from '../lib/pricing.js';
 import { getNextOrderNumber } from '../lib/order.js';
+import { getAuthenticatedUser } from './auth.js';
 
 export const checkoutRouter = Router();
 
@@ -141,12 +142,13 @@ checkoutRouter.post('/checkout', async (req: Request, res: Response) => {
 
     // 5 & 6. Transaction: Generate order number, create Order + OrderItems + Delivery, and empty Cart
     const orderNo = await getNextOrderNumber();
+    const authUser = await getAuthenticatedUser(req);
 
     const createdOrder = await prisma.$transaction(async (tx) => {
       const order = await tx.order.create({
         data: {
           order_no: orderNo,
-          user_id: null,
+          user_id: authUser?.id || null,
           guest_name: name,
           guest_phone: phone,
           address: {

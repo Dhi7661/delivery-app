@@ -111,3 +111,12 @@ export interface OrderData {
   delivery?: DeliveryData | null;
 }
 
+export interface UserData {
+  id: string;
+  name: string | null;
+  phone: string;
+  email?: string | null;
+  role: string;
+}
+
+
