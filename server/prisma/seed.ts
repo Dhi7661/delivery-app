@@ -73,6 +73,18 @@ export async function seedCatalog(customProducts?: DummyProduct[]) {
     });
   }
 
+  console.log('[Seed] Seeding serviceable pincodes...');
+  await prisma.serviceablePincode.upsert({
+    where: { pincode: '411001' },
+    update: { is_active: true },
+    create: {
+      pincode: '411001',
+      is_active: true,
+      delivery_fee_paise: 2000,
+      free_threshold_paise: 30000,
+    },
+  });
+
   console.log('[Seed] Seeding shops...');
   const shopMap = new Map<string, string>();
   for (const shop of DUMMY_SHOPS) {
