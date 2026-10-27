@@ -69,8 +69,34 @@ model User {
   addresses  Address[]
   orders     Order[]
   tickets    SupportTicket[]
+  sessions   Session[]
 
   @@map("users")
+}
+
+model Session {
+  id         String   @id @default(uuid())
+  user_id    String
+  token      String   @unique
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("sessions")
+}
+
+model OtpVerification {
+  id         String   @id @default(uuid())
+  phone      String   @unique
+  otp_hash   String
+  attempts   Int      @default(0)
+  expires_at DateTime
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("otp_verifications")
 }
 
 model Address {

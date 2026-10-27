@@ -7,6 +7,7 @@ import { BRAND_NAME } from './lib/brand.js';
 import { catalogRouter } from './routes/catalog.js';
 import { cartRouter } from './routes/cart.js';
 import { checkoutRouter } from './routes/checkout.js';
+import { authRouter } from './routes/auth.js';
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use(express.json());
 app.use('/api', catalogRouter);
 app.use('/api', cartRouter);
 app.use('/api', checkoutRouter);
+app.use('/api', authRouter);
 
 // API v1 Health Check with DB connectivity test
 app.get('/api/v1/health', async (_req: Request, res: Response) => {
