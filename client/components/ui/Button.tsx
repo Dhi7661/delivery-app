@@ -3,7 +3,7 @@
 import React from 'react';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'saffron' | 'secondary' | 'outline' | 'ghost';
+  variant?: 'primary' | 'outline' | 'dangerOutline' | 'danger' | 'saffron' | 'secondary' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
   loading?: boolean;
@@ -30,10 +30,15 @@ export default function Button({
   }[size];
 
   const variantStyles = {
-    primary: 'bg-primary text-background hover:opacity-90',
+    // primary: solid primary token with card/white text
+    primary: 'bg-primary text-card hover:opacity-90',
+    // outline: card background with primary border and text
+    outline: 'bg-card text-primary border border-primary hover:bg-surface',
+    // danger outline: card background with danger border and text
+    dangerOutline: 'bg-card text-danger border border-danger hover:bg-surface',
+    danger: 'bg-card text-danger border border-danger hover:bg-surface',
     saffron: 'bg-saffron text-on-saffron hover:opacity-90',
     secondary: 'bg-surface text-heading border border-border hover:bg-chip',
-    outline: 'bg-card text-primary border border-border hover:bg-surface',
     ghost: 'bg-transparent text-primary hover:bg-surface',
   }[variant];
 

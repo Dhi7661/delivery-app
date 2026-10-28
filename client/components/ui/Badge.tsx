@@ -1,21 +1,22 @@
 import React from 'react';
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: 'saffron' | 'chip' | 'surface' | 'primary' | 'muted';
+  variant?: 'saffron' | 'neutral' | 'primary';
 }
 
 export default function Badge({
   children,
-  variant = 'chip',
+  variant = 'neutral',
   className = '',
   ...props
 }: BadgeProps) {
   const variantStyles = {
+    // saffron: saffron background, on-saffron text
     saffron: 'bg-saffron text-on-saffron font-bold',
-    chip: 'bg-chip text-heading border border-border/60 font-semibold',
-    surface: 'bg-surface text-muted border border-border font-medium',
-    primary: 'bg-primary text-background font-bold',
-    muted: 'bg-chip text-muted font-normal',
+    // neutral: surface background, muted text
+    neutral: 'bg-surface text-muted border border-border/60 font-semibold',
+    // primary: chip background, primary text
+    primary: 'bg-chip text-primary border border-border/60 font-bold',
   }[variant];
 
   return (

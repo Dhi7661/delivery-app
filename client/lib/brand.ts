@@ -53,4 +53,5 @@ export const THEME_TOKENS = {
   muted: '#52443D',
   saffron: '#FEBA49',
   onSaffron: '#704B00',
+  danger: '#B42318',
 } as const;
