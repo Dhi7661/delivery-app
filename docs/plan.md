@@ -14,7 +14,7 @@ Success in 60 days: 10 to 20 real orders in two weeks, some repeat customers by 
 | Backend | Express.js, TypeScript (strict), Prisma ORM |
 | Database | PostgreSQL |
 | App type | Mobile-first website, installable as a PWA. Native app later, if needed. |
-| Payments | Payment gateway (Razorpay or Cashfree, to be chosen) and cash on delivery below a limit |
+| Payments | Razorpay UPI payments (0% commission) and Cash on Delivery (COD) below limit. Cards disabled. |
 | Orders | One shop per order in v1 |
 | Checkout | Guest checkout in Phase 1 |
 | Delivery | Founder delivers personally at first. Free delivery above a threshold. |

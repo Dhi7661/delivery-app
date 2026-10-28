@@ -12,6 +12,7 @@ import { adminRouter } from './routes/admin.js';
 import { addressRouter } from './routes/address.js';
 import { deliveryRouter } from './routes/delivery.js';
 import { invoiceRouter } from './routes/invoice.js';
+import { paymentRouter } from './routes/payment.js';
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ app.use('/api', adminRouter);
 app.use('/api', addressRouter);
 app.use('/api', deliveryRouter);
 app.use('/api', invoiceRouter);
+app.use('/api/payments', paymentRouter);
 
 // API v1 Health Check with DB connectivity test
 app.get('/api/v1/health', async (_req: Request, res: Response) => {
