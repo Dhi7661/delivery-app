@@ -7,7 +7,7 @@ import { API_BASE_URL } from '@/lib/api';
 
 interface AdminHeaderProps {
   adminEmail?: string;
-  activeTab?: 'orders' | 'deliveries' | 'products';
+  activeTab?: 'orders' | 'deliveries' | 'products' | 'notifications';
 }
 
 export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps) {
@@ -35,6 +35,8 @@ export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps)
       ? 'deliveries'
       : pathname?.includes('/admin/products')
       ? 'products'
+      : pathname?.includes('/admin/notifications')
+      ? 'notifications'
       : 'orders');
 
   return (
@@ -105,6 +107,18 @@ export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps)
         >
           <span>📄</span>
           <span>CSV Upload</span>
+        </Link>
+
+        <Link
+          href="/admin/notifications"
+          className={`py-2.5 px-2.5 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[42px] ${
+            currentTab === 'notifications'
+              ? 'border-emerald-500 text-emerald-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <span>🔔</span>
+          <span>Notifications</span>
         </Link>
       </div>
     </header>
