@@ -133,12 +133,23 @@ export interface OrderData {
     landmark?: string | null;
     pincode: string;
   };
-  status: 'PLACED' | 'CONFIRMED' | 'PACKED' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'CANCELLED';
+  status:
+    | 'PLACED'
+    | 'PAYMENT_PENDING'
+    | 'PAYMENT_FAILED'
+    | 'CONFIRMED'
+    | 'SENT_TO_SHOP'
+    | 'PACKED'
+    | 'OUT_FOR_DELIVERY'
+    | 'DELIVERED'
+    | 'FAILED_DELIVERY'
+    | 'CANCELLED'
+    | 'RETURNED';
   subtotal_paise: number;
   delivery_fee_paise: number;
   total_paise: number;
-  payment_method: 'COD';
-  payment_status: 'PENDING' | 'PENDING_COLLECTION' | 'PAID' | 'REFUNDED';
+  payment_method: 'COD' | 'UPI' | 'CARD';
+  payment_status: 'PENDING' | 'PENDING_COLLECTION' | 'SUCCESS' | 'FAILED' | 'REFUNDED';
   idempotency_key: string;
   created_at: string;
   items: OrderItemData[];

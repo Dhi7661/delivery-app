@@ -122,7 +122,8 @@ function OrderTrackingContent() {
 
   const getStepIcon = (status: string, completed: boolean, current: boolean) => {
     if (status === 'CANCELLED') return '✕';
-    if (status === 'FAILED_DELIVERY') return '⚠️';
+    if (status === 'FAILED_DELIVERY' || status === 'PAYMENT_FAILED') return '⚠️';
+    if (status === 'PAYMENT_PENDING') return '⏳';
     if (completed) return '✓';
     if (current) return '●';
     return '○';
@@ -193,14 +194,30 @@ function OrderTrackingContent() {
                       ? 'bg-blue-100 text-blue-800 border border-blue-200'
                       : order.status === 'OUT_FOR_DELIVERY'
                       ? 'bg-amber-100 text-amber-900 border border-amber-200 animate-pulse'
-                      : order.status === 'CANCELLED'
+                      : order.status === 'CANCELLED' || order.status === 'PAYMENT_FAILED'
                       ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                      : order.status === 'PAYMENT_PENDING'
+                      ? 'bg-amber-100 text-amber-800 border border-amber-300 animate-pulse'
                       : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                   }`}
                 >
                   {order.status.replace(/_/g, ' ')}
                 </span>
               </div>
+
+              {order.status === 'PAYMENT_FAILED' && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 flex items-center justify-between gap-2">
+                  <div className="text-xs text-rose-800 font-medium">
+                    ⚠️ UPI payment failed. You can retry placing this order.
+                  </div>
+                  <Link
+                    href="/checkout"
+                    className="shrink-0 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-rose-700 active:scale-95 transition-transform"
+                  >
+                    Retry Payment
+                  </Link>
+                </div>
+              )}
 
               {/* Guest Phone Verification Gate */}
               {!isVerified && (
@@ -278,7 +295,8 @@ function OrderTrackingContent() {
                   const isCurrent = step.current;
                   const isCompleted = step.completed;
                   const isCancelled = step.status === 'CANCELLED';
-                  const isFailed = step.status === 'FAILED_DELIVERY';
+                  const isFailed = step.status === 'FAILED_DELIVERY' || step.status === 'PAYMENT_FAILED';
+                  const isPaymentPending = step.status === 'PAYMENT_PENDING';
 
                   return (
                     <div key={step.status} className="relative">
@@ -294,10 +312,10 @@ function OrderTrackingContent() {
                       {/* Timeline Icon Node */}
                       <div
                         className={`absolute -left-[26px] top-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black shadow-xs transition-all ${
-                          isCancelled
+                          isCancelled || isFailed
                             ? 'bg-rose-600 text-white'
-                            : isFailed
-                            ? 'bg-amber-600 text-white'
+                            : isPaymentPending
+                            ? 'bg-amber-500 text-white ring-4 ring-amber-100'
                             : isCurrent
                             ? 'bg-emerald-600 text-white ring-4 ring-emerald-100 scale-110'
                             : isCompleted

@@ -7,6 +7,7 @@ import { calculateDeliveryFee, isCodAllowed } from '../lib/pricing.js';
 import { getNextOrderNumber } from '../lib/order.js';
 import { getAuthenticatedUser } from './auth.js';
 import { dispatchOrderStatusNotifications, normalizePhone, maskPhone } from '../lib/notifications.js';
+import { createRazorpayGatewayOrder, getRazorpayKeyId } from '../lib/razorpay.js';
 
 type CartWithItems = Prisma.CartGetPayload<{
   include: {
@@ -32,6 +33,7 @@ const CheckoutSchema = z.object({
   landmark: z.string().trim().optional(),
   pincode: z.string().trim().regex(/^\d{6}$/, 'Pincode must be exactly 6 digits').optional(),
   addressId: z.string().uuid().optional(),
+  paymentMethod: z.enum(['COD', 'UPI']).default('COD'),
   idempotencyKey: z.string().min(5, 'idempotencyKey is required'),
 });
 
@@ -55,15 +57,16 @@ checkoutRouter.post('/checkout', async (req: Request, res: Response) => {
       return res.status(400).json({ error: parseResult.error.errors[0]?.message });
     }
 
-    const { name, phone, address, landmark, pincode, addressId, idempotencyKey } = parseResult.data;
+    const { name, phone, address, landmark, pincode, addressId, paymentMethod, idempotencyKey } = parseResult.data;
 
     // Check for existing order with same idempotency key
     const existingOrder = await prisma.order.findUnique({
       where: { idempotency_key: idempotencyKey },
-      include: { items: true },
+      include: { items: true, payments: true },
     });
 
     if (existingOrder) {
+      const upiPayment = existingOrder.payments.find((p) => p.gateway === 'razorpay');
       return res.status(200).json({
         success: true,
         orderNumber: existingOrder.order_no,
@@ -75,6 +78,17 @@ checkoutRouter.post('/checkout', async (req: Request, res: Response) => {
         paymentMethod: existingOrder.payment_method,
         paymentStatus: existingOrder.payment_status,
         isIdempotentReplay: true,
+        ...(existingOrder.payment_method === 'UPI' && upiPayment
+          ? {
+              razorpay: {
+                keyId: getRazorpayKeyId(),
+                orderId: upiPayment.gateway_order_id,
+                amountPaise: existingOrder.total_paise,
+                currency: 'INR',
+                method: 'upi',
+              },
+            }
+          : {}),
       });
     }
 
@@ -201,17 +215,36 @@ checkoutRouter.post('/checkout', async (req: Request, res: Response) => {
     const delivery_fee_paise = await calculateDeliveryFee(subtotal_paise);
     const total_paise = subtotal_paise + delivery_fee_paise;
 
-    // 4. Check total against COD limit
-    const codAllowed = await isCodAllowed(total_paise);
-    if (!codAllowed) {
-      return res.status(400).json({
-        error: 'Order total exceeds Cash on Delivery limit (₹1,000). Please adjust items.',
+    // 4. Check total against COD limit ONLY if payment method is COD
+    if (paymentMethod === 'COD') {
+      const codAllowed = await isCodAllowed(total_paise);
+      if (!codAllowed) {
+        return res.status(400).json({
+          error: 'Order total exceeds Cash on Delivery limit (₹1,000). Please adjust items or pay online with UPI.',
+        });
+      }
+    }
+
+    // 5. Generate order number
+    const orderNo = await getNextOrderNumber();
+
+    // For UPI: create gateway order before saving to DB
+    let gatewayOrder: any = null;
+    if (paymentMethod === 'UPI') {
+      gatewayOrder = await createRazorpayGatewayOrder({
+        amountPaise: total_paise,
+        orderNo,
+        notes: {
+          guest_phone: phone,
+          guest_name: name,
+        },
       });
     }
 
-    // 5 & 6. Transaction: Generate order number, create Order + OrderItems + Delivery, and empty Cart
-    const orderNo = await getNextOrderNumber();
+    const orderStatus = paymentMethod === 'UPI' ? 'PAYMENT_PENDING' : 'CONFIRMED';
+    const paymentStatus = paymentMethod === 'UPI' ? 'PENDING' : 'PENDING_COLLECTION';
 
+    // 6. Transaction: create Order + OrderItems + Delivery/Payment, and empty Cart
     const createdOrder = await prisma.$transaction(async (tx) => {
       const order = await tx.order.create({
         data: {
@@ -224,12 +257,12 @@ checkoutRouter.post('/checkout', async (req: Request, res: Response) => {
             landmark: finalLandmark || null,
             pincode: finalPincode,
           },
-          status: 'CONFIRMED',
+          status: orderStatus,
           subtotal_paise,
           delivery_fee_paise,
           total_paise,
-          payment_method: 'COD',
-          payment_status: 'PENDING_COLLECTION',
+          payment_method: paymentMethod,
+          payment_status: paymentStatus,
           idempotency_key: idempotencyKey,
           items: {
             create: orderItemsData,
@@ -243,6 +276,19 @@ checkoutRouter.post('/checkout', async (req: Request, res: Response) => {
         },
       });
 
+      // If UPI, create initial Payment record
+      if (paymentMethod === 'UPI' && gatewayOrder) {
+        await tx.payment.create({
+          data: {
+            order_id: order.id,
+            gateway: 'razorpay',
+            gateway_order_id: gatewayOrder.id,
+            amount_paise: total_paise,
+            status: 'PENDING',
+          },
+        });
+      }
+
       // Empty cart
       await tx.cartItem.deleteMany({
         where: { cart_id: cart.id },
@@ -251,11 +297,14 @@ checkoutRouter.post('/checkout', async (req: Request, res: Response) => {
       return order;
     });
 
-    // F14: Dispatch automated confirmation notification
-    try {
-      await dispatchOrderStatusNotifications(createdOrder.id, 'CONFIRMED');
-    } catch (notifErr) {
-      console.error('[Notification] Failed to trigger CONFIRMED notification:', notifErr);
+    // F14: Dispatch automated confirmation notification ONLY when confirmed (COD)
+    // F16: UPI orders remain PAYMENT_PENDING until signed webhook confirms in F17
+    if (createdOrder.status === 'CONFIRMED') {
+      try {
+        await dispatchOrderStatusNotifications(createdOrder.id, 'CONFIRMED');
+      } catch (notifErr) {
+        console.error('[Notification] Failed to trigger CONFIRMED notification:', notifErr);
+      }
     }
 
     // 7. Return the order details
@@ -269,6 +318,18 @@ checkoutRouter.post('/checkout', async (req: Request, res: Response) => {
       status: createdOrder.status,
       paymentMethod: createdOrder.payment_method,
       paymentStatus: createdOrder.payment_status,
+      ...(paymentMethod === 'UPI' && gatewayOrder
+        ? {
+            razorpay: {
+              keyId: getRazorpayKeyId(),
+              orderId: gatewayOrder.id,
+              amountPaise: total_paise,
+              currency: 'INR',
+              method: 'upi',
+              isSimulated: gatewayOrder.isSimulated || false,
+            },
+          }
+        : {}),
     });
   } catch (error) {
     console.error('Checkout error:', error);
@@ -313,6 +374,42 @@ async function buildOrderTimeline(order: any) {
   const currentStatus = order.status;
   const isCancelled = currentStatus === 'CANCELLED';
   const isFailed = currentStatus === 'FAILED_DELIVERY';
+  const isPaymentPending = currentStatus === 'PAYMENT_PENDING';
+  const isPaymentFailed = currentStatus === 'PAYMENT_FAILED';
+
+  if (isPaymentFailed) {
+    return [
+      {
+        status: 'PAYMENT_FAILED',
+        label: 'Payment Failed',
+        description: 'UPI payment could not be processed. Please retry payment to place your order.',
+        timestamp: order.updated_at ? order.updated_at.toISOString() : new Date().toISOString(),
+        completed: true,
+        current: true,
+      },
+    ];
+  }
+
+  if (isPaymentPending) {
+    return [
+      {
+        status: 'PAYMENT_PENDING',
+        label: 'Payment Pending',
+        description: 'Awaiting UPI payment verification. Your order will be confirmed once payment is confirmed.',
+        timestamp: order.created_at ? order.created_at.toISOString() : new Date().toISOString(),
+        completed: true,
+        current: true,
+      },
+      ...stageOrder.map((stage) => ({
+        status: stage,
+        label: labels[stage] || stage,
+        description: descriptions[stage] || '',
+        timestamp: null,
+        completed: false,
+        current: false,
+      })),
+    ];
+  }
 
   const timestamps: Record<string, Date> = {
     CONFIRMED: order.created_at,
@@ -404,6 +501,7 @@ checkoutRouter.get('/orders/:orderNo', async (req: Request, res: Response) => {
           },
         },
         delivery: true,
+        payments: true,
         invoice: {
           include: {
             credit_notes: true,

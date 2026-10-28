@@ -312,7 +312,7 @@ model Payment {
   order_id           String
   gateway            String
   gateway_order_id   String?
-  gateway_payment_id String        @unique
+  gateway_payment_id String?       @unique
   amount_paise       Int
   status             PaymentStatus @default(PENDING)
   created_at         DateTime      @default(now())

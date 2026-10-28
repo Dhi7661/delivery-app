@@ -34,9 +34,35 @@ export default function CheckoutPage() {
   const [landmark, setLandmark] = useState('');
   const [pincode, setPincode] = useState(SERVICEABLE_PINCODE);
   const [idempotencyKey, setIdempotencyKey] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'COD'>('UPI');
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Test mode simulation modal state (F16)
+  const [testModalData, setTestModalData] = useState<{
+    orderNumber: string;
+    orderId: string;
+    amountPaise: number;
+    keyId: string;
+    gatewayOrderId: string;
+  } | null>(null);
+  const [simulating, setSimulating] = useState(false);
+
+  // Dynamic script loader for Razorpay Checkout
+  const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (typeof window === 'undefined') return resolve(false);
+      if ((window as any).Razorpay) return resolve(true);
+
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
 
   // Initialize unique idempotency key once on mount
   useEffect(() => {
@@ -79,6 +105,13 @@ export default function CheckoutPage() {
 
   const isOverCodLimit = cart && cart.total_paise > COD_MAX_LIMIT_PAISE;
 
+  // Auto-switch to UPI if cart exceeds COD limit
+  useEffect(() => {
+    if (isOverCodLimit && paymentMethod === 'COD') {
+      setPaymentMethod('UPI');
+    }
+  }, [isOverCodLimit, paymentMethod]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -95,8 +128,11 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (isOverCodLimit) {
-      setErrorMessage('Order total exceeds the ₹1,000 Cash on Delivery limit. Please adjust items in cart.');
+    // COD limit validation applies ONLY if COD is selected
+    if (paymentMethod === 'COD' && isOverCodLimit) {
+      setErrorMessage(
+        'Order total exceeds the ₹1,000 Cash on Delivery limit. Please select Pay Online (UPI) or adjust items in cart.'
+      );
       return;
     }
 
@@ -163,6 +199,7 @@ export default function CheckoutPage() {
           landmark: payloadLandmark,
           pincode: payloadPincode,
           addressId: payloadAddressId,
+          paymentMethod,
           idempotencyKey,
         }),
       });
@@ -175,16 +212,133 @@ export default function CheckoutPage() {
         return;
       }
 
-      // Success! Refresh cart state authority-side
-      await refreshCart();
+      // 1. Cash on Delivery (COD) Flow
+      if (paymentMethod === 'COD') {
+        await refreshCart();
+        router.push(`/order/${data.orderNumber}`);
+        return;
+      }
 
-      // Navigate to order confirmation
-      router.push(`/order/${data.orderNumber}`);
+      // 2. UPI Online Payment Flow
+      if (paymentMethod === 'UPI') {
+        const isSimulated =
+          data.razorpay?.isSimulated ||
+          !data.razorpay?.keyId ||
+          data.razorpay?.keyId.includes('dummy') ||
+          data.razorpay?.keyId.includes('placeholder');
+
+        if (isSimulated) {
+          // Open in-app Razorpay Test Simulation Modal
+          setTestModalData({
+            orderNumber: data.orderNumber,
+            orderId: data.orderId,
+            amountPaise: data.totalPaise,
+            keyId: data.razorpay?.keyId || 'rzp_test_dummy',
+            gatewayOrderId: data.razorpay?.orderId || '',
+          });
+          setSubmitting(false);
+          return;
+        }
+
+        // Live test mode keys: load Razorpay checkout script
+        const scriptLoaded = await loadRazorpayScript();
+        if (scriptLoaded && (window as any).Razorpay) {
+          const rzp = new (window as any).Razorpay({
+            key: data.razorpay.keyId,
+            amount: data.razorpay.amountPaise,
+            currency: 'INR',
+            name: 'PlukIt',
+            description: `Order #${data.orderNumber}`,
+            order_id: data.razorpay.orderId,
+            prefill: {
+              name: name.trim(),
+              contact: cleanPhone,
+            },
+            theme: { color: '#059669' },
+            config: {
+              display: {
+                blocks: {
+                  upi: {
+                    name: 'Pay with UPI',
+                    instruments: [{ method: 'upi' }],
+                  },
+                },
+                sequence: ['block.upi'],
+                preferences: { show_default_blocks: false },
+              },
+            },
+            modal: {
+              ondismiss: async function () {
+                try {
+                  await fetch(`${API_BASE_URL}/payments/razorpay/fail`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      orderNo: data.orderNumber,
+                      reason: 'User dismissed UPI checkout modal',
+                    }),
+                  });
+                } catch (e) {
+                  console.error('Failed to notify cancellation', e);
+                }
+                await refreshCart();
+                router.push(`/orders/${data.orderNumber}`);
+              },
+            },
+            handler: async function () {
+              // Per F16 specification: browser does not confirm order.
+              // Order status remains PAYMENT_PENDING on server until webhook (F17).
+              await refreshCart();
+              router.push(`/order/${data.orderNumber}`);
+            },
+          });
+          rzp.open();
+          setSubmitting(false);
+        } else {
+          // Fallback to test simulation modal if script is blocked or offline
+          setTestModalData({
+            orderNumber: data.orderNumber,
+            orderId: data.orderId,
+            amountPaise: data.totalPaise,
+            keyId: data.razorpay?.keyId || 'rzp_test_dummy',
+            gatewayOrderId: data.razorpay?.orderId || '',
+          });
+          setSubmitting(false);
+        }
+      }
     } catch (err: unknown) {
       console.error('Checkout error:', err);
       setErrorMessage('Network error while placing order. Please check your connection.');
       setSubmitting(false);
     }
+  };
+
+  const handleSimulateUpiSuccess = async () => {
+    if (!testModalData) return;
+    setSimulating(true);
+    await refreshCart();
+    // Per F16: order status is read authority-side from the server (PAYMENT_PENDING)
+    router.push(`/order/${testModalData.orderNumber}`);
+  };
+
+  const handleSimulateUpiFailure = async () => {
+    if (!testModalData) return;
+    setSimulating(true);
+    try {
+      await fetch(`${API_BASE_URL}/payments/razorpay/fail`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderNo: testModalData.orderNumber,
+          reason: 'Simulated UPI payment failure (cancelled or declined)',
+          description: 'Payment was cancelled in test mode simulation',
+        }),
+      });
+    } catch (err) {
+      console.error('Error simulating payment failure', err);
+    }
+    await refreshCart();
+    router.push(`/orders/${testModalData.orderNumber}`);
   };
 
   const loading = cartLoading || authLoading;
@@ -517,32 +671,123 @@ export default function CheckoutPage() {
               )}
             </div>
 
-            {/* Payment Method Section */}
+            {/* Payment Method Section (UPI + COD only, cards disabled) */}
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-1.5">
-                <span>💳</span>
-                <span>Payment Method</span>
-              </h2>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <span>💳</span>
+                  <span>Payment Method</span>
+                </h2>
+                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                  0% Fee via UPI
+                </span>
+              </div>
 
-              <div className="rounded-xl border-2 border-emerald-600 bg-emerald-50/60 p-3.5 flex items-start gap-3">
-                <div className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white shrink-0">
-                  <span className="text-xs">✓</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-slate-900">
-                      Cash on Delivery (COD)
-                    </span>
-                    <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800 uppercase">
-                      Default
-                    </span>
+              <div className="space-y-3">
+                {/* 1. UPI Payment Option */}
+                <div
+                  onClick={() => setPaymentMethod('UPI')}
+                  className={`cursor-pointer rounded-xl border-2 p-3.5 transition-all flex items-start gap-3 ${
+                    paymentMethod === 'UPI'
+                      ? 'border-emerald-600 bg-emerald-50/70 shadow-xs'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <div
+                    className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold shrink-0 transition-colors ${
+                      paymentMethod === 'UPI'
+                        ? 'bg-emerald-600 text-white'
+                        : 'border-2 border-slate-300 text-transparent'
+                    }`}
+                  >
+                    ✓
                   </div>
-                  <p className="mt-1 text-xs text-slate-600 leading-normal">
-                    Pay in cash directly to our delivery executive when your parcel arrives.
-                  </p>
-                  <div className="mt-2 text-[11px] text-slate-500 flex items-center gap-1">
-                    <span>💵</span>
-                    <span>Max limit ₹1,000 per order</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between flex-wrap gap-1">
+                      <span className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                        <span>📱</span>
+                        <span>Pay Online (UPI)</span>
+                      </span>
+                      <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800 uppercase tracking-wide">
+                        Recommended
+                      </span>
+                    </div>
+
+                    <p className="mt-1 text-xs text-slate-600 leading-normal">
+                      Instant payment with Google Pay, PhonePe, Paytm, BHIM, or QR code. <strong>Cards are disabled to keep fees at 0%.</strong>
+                    </p>
+
+                    <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+                      <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200">
+                        Google Pay
+                      </span>
+                      <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200">
+                        PhonePe
+                      </span>
+                      <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200">
+                        Paytm
+                      </span>
+                      <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200">
+                        BHIM QR
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Cash on Delivery (COD) Option */}
+                <div
+                  onClick={() => {
+                    if (isOverCodLimit) {
+                      setErrorMessage(
+                        'Orders exceeding ₹1,000 must be paid online via UPI. Please use UPI payment.'
+                      );
+                      return;
+                    }
+                    setPaymentMethod('COD');
+                  }}
+                  className={`rounded-xl border-2 p-3.5 transition-all flex items-start gap-3 ${
+                    isOverCodLimit
+                      ? 'border-slate-200 bg-slate-50/70 opacity-60 cursor-not-allowed'
+                      : paymentMethod === 'COD'
+                      ? 'border-emerald-600 bg-emerald-50/70 shadow-xs cursor-pointer'
+                      : 'border-slate-200 bg-white hover:border-slate-300 cursor-pointer'
+                  }`}
+                >
+                  <div
+                    className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold shrink-0 transition-colors ${
+                      paymentMethod === 'COD'
+                        ? 'bg-emerald-600 text-white'
+                        : 'border-2 border-slate-300 text-transparent'
+                    }`}
+                  >
+                    ✓
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between flex-wrap gap-1">
+                      <span className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                        <span>💵</span>
+                        <span>Cash on Delivery (COD)</span>
+                      </span>
+                      <span
+                        className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                          isOverCodLimit
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-slate-100 text-slate-600'
+                        }`}
+                      >
+                        {isOverCodLimit ? 'Exceeds ₹1,000 Limit' : 'Max ₹1,000'}
+                      </span>
+                    </div>
+
+                    <p className="mt-1 text-xs text-slate-600 leading-normal">
+                      Pay in cash directly to our delivery executive when your parcel arrives.
+                    </p>
+
+                    {isOverCodLimit && (
+                      <p className="mt-1.5 text-[11px] font-semibold text-amber-700">
+                        ⚠️ Total is over ₹1,000. Please pay via UPI.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -605,12 +850,12 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Submit Button */}
+              {/* Dynamic Submit Button */}
               <button
                 type="submit"
-                disabled={submitting || !!isOverCodLimit}
+                disabled={submitting || (paymentMethod === 'COD' && !!isOverCodLimit)}
                 className={`mt-4 flex min-h-[48px] w-full items-center justify-center rounded-xl font-bold text-base text-white shadow-md transition-all active:scale-98 ${
-                  submitting || isOverCodLimit
+                  submitting || (paymentMethod === 'COD' && isOverCodLimit)
                     ? 'bg-slate-300 cursor-not-allowed text-slate-500'
                     : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 cursor-pointer'
                 }`}
@@ -618,8 +863,13 @@ export default function CheckoutPage() {
                 {submitting ? (
                   <div className="flex items-center gap-2">
                     <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    <span>Placing Order...</span>
+                    <span>{paymentMethod === 'UPI' ? 'Connecting to UPI...' : 'Placing Order...'}</span>
                   </div>
+                ) : paymentMethod === 'UPI' ? (
+                  <span className="flex items-center gap-1.5">
+                    <span>📱</span>
+                    <span>Pay with UPI ({formatPaise(cart.total_paise)})</span>
+                  </span>
                 ) : (
                   <span>Place COD Order ({formatPaise(cart.total_paise)})</span>
                 )}
@@ -631,9 +881,104 @@ export default function CheckoutPage() {
             </div>
           </form>
         )}
+
+        {/* Razorpay Test Payment Simulation Modal (F16 Test Mode) */}
+        {testModalData && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fade-in">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl border border-slate-200">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">⚡</span>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 leading-tight">
+                      Razorpay Test Mode
+                    </h3>
+                    <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
+                      UPI Only (0% Commission)
+                    </span>
+                  </div>
+                </div>
+                <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800 uppercase">
+                  Simulation
+                </span>
+              </div>
+
+              <div className="my-4 text-center bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <span className="text-xs text-slate-500 block">Total Amount</span>
+                <span className="text-2xl font-black text-slate-900">
+                  {formatPaise(testModalData.amountPaise)}
+                </span>
+                <span className="text-[11px] font-mono font-bold text-slate-500 block mt-0.5">
+                  Order #{testModalData.orderNumber}
+                </span>
+              </div>
+
+              <div className="space-y-2 mb-4">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+                  Select Simulated UPI Flow
+                </span>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-xl border border-slate-200 p-2.5 text-center font-bold text-slate-700 bg-white hover:border-emerald-500">
+                    Google Pay
+                  </div>
+                  <div className="rounded-xl border border-slate-200 p-2.5 text-center font-bold text-slate-700 bg-white hover:border-emerald-500">
+                    PhonePe
+                  </div>
+                  <div className="rounded-xl border border-slate-200 p-2.5 text-center font-bold text-slate-700 bg-white hover:border-emerald-500">
+                    Paytm UPI
+                  </div>
+                  <div className="rounded-xl border border-slate-200 p-2.5 text-center font-bold text-slate-700 bg-white hover:border-emerald-500">
+                    BHIM QR
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-tight pt-1">
+                  Cards are disabled as requested. Simulate gateway response:
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  disabled={simulating}
+                  onClick={handleSimulateUpiSuccess}
+                  className="w-full min-h-[44px] rounded-xl bg-emerald-600 font-bold text-xs text-white shadow-md hover:bg-emerald-700 active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  {simulating ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <>
+                      <span>✓</span>
+                      <span>Simulate UPI Payment Success</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={simulating}
+                  onClick={handleSimulateUpiFailure}
+                  className="w-full min-h-[42px] rounded-xl border border-rose-200 bg-rose-50 font-bold text-xs text-rose-700 hover:bg-rose-100 active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span>✕</span>
+                  <span>Simulate Payment Failure</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={simulating}
+                  onClick={handleSimulateUpiFailure}
+                  className="w-full min-h-[36px] rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-600 active:scale-98 transition-all cursor-pointer"
+                >
+                  Cancel &amp; Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       <BottomNav />
     </div>
   );
 }
+
