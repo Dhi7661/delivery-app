@@ -249,6 +249,25 @@ function OrderDetailsContent() {
             </span>
           </div>
         </div>
+
+        {/* GST Invoice Section (F15) */}
+        {order.invoice && (
+          <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
+            <div>
+              <span className="text-xs font-bold text-slate-700 block">GST Tax Invoice</span>
+              <span className="font-mono text-[11px] text-slate-400">{order.invoice.invoice_no}</span>
+            </div>
+            <a
+              href={`${API_BASE_URL}/invoices/${order.invoice.invoice_no}/pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+            >
+              <span>📄</span>
+              <span>Download PDF</span>
+            </a>
+          </div>
+        )}
       </div>
 
       {/* Action Buttons */}

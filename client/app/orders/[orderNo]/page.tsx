@@ -418,6 +418,84 @@ function OrderTrackingContent() {
               </div>
             </div>
 
+            {/* GST Tax Invoice & Credit Notes Card (F15) */}
+            {order.invoice && (
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-700">
+                    <span>🧾</span>
+                    <span>GST Tax Invoice</span>
+                  </div>
+                  <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                    Compliant
+                  </span>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-3 space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">Invoice Number:</span>
+                    <span className="font-mono font-bold text-slate-900">{order.invoice.invoice_no}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">Invoice Date:</span>
+                    <span className="text-slate-700 font-medium">
+                      {new Date(order.invoice.invoice_date).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">Seller GSTIN:</span>
+                    <span className="font-mono text-slate-700">{order.invoice.seller_gstin}</span>
+                  </div>
+                  <div className="border-t border-slate-200 pt-1.5 flex items-center justify-between text-[11px] text-slate-500">
+                    <span>Taxable: {formatPaise(order.invoice.taxable_amount_paise)}</span>
+                    <span>CGST+SGST: {formatPaise(order.invoice.gst_amount_paise)}</span>
+                  </div>
+                </div>
+
+                <a
+                  href={`${API_BASE_URL}/invoices/${order.invoice.invoice_no}/pdf`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 active:scale-98 transition-all"
+                >
+                  <span>📄</span>
+                  <span>Download Tax Invoice (PDF)</span>
+                </a>
+
+                {/* Credit Notes if order was returned/cancelled */}
+                {order.invoice.credit_notes && order.invoice.credit_notes.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-rose-800">
+                      <span>↩️</span>
+                      <span>Credit Note Issued</span>
+                    </div>
+                    {order.invoice.credit_notes.map((cn) => (
+                      <div key={cn.id} className="rounded-xl bg-rose-50/70 border border-rose-200 p-2.5 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-mono font-bold text-rose-900">{cn.credit_note_no}</span>
+                          <span className="font-bold text-rose-700">{formatPaise(cn.total_paise)}</span>
+                        </div>
+                        <p className="text-[11px] text-rose-600">Reason: {cn.reason}</p>
+                        <a
+                          href={`${API_BASE_URL}/credit-notes/${cn.credit_note_no}/pdf`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex min-h-[38px] w-full items-center justify-center gap-2 rounded-lg bg-rose-600 px-3 text-[11px] font-bold text-white shadow-xs hover:bg-rose-700 active:scale-98"
+                        >
+                          <span>📄</span>
+                          <span>Download Credit Note (PDF)</span>
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Help / Support Link */}
             <div className="p-3 text-center text-xs text-slate-400">
               Need help with this order? PlukIt support is ready to assist.

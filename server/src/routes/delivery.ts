@@ -4,6 +4,7 @@ import { OrderStatus } from '@prisma/client';
 import { prisma } from '../lib/db.js';
 import { requireAdminAuth } from './admin.js';
 import { dispatchOrderStatusNotifications } from '../lib/notifications.js';
+import { generateOrderInvoice } from '../lib/invoice.js';
 
 export const deliveryRouter = Router();
 
@@ -318,6 +319,13 @@ deliveryRouter.post('/admin/deliveries/:orderId/delivered', requireAdminAuth, as
       await dispatchOrderStatusNotifications(order.id, 'DELIVERED');
     } catch (notifErr) {
       console.error('[Notification] Error dispatching DELIVERED notification:', notifErr);
+    }
+
+    // F15: Automatically generate GST Invoice when DELIVERED
+    try {
+      await generateOrderInvoice(order.id);
+    } catch (invErr) {
+      console.error('[Invoice] Error generating GST invoice upon DELIVERED:', invErr);
     }
 
     res.status(200).json({

@@ -4,7 +4,7 @@ import React, { Suspense, useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import AdminHeader from '@/components/AdminHeader';
-import { API_BASE_URL } from '@/lib/api';
+import { API_BASE_URL, InvoiceData } from '@/lib/api';
 import { formatPaise } from '@/lib/money';
 import {
   OrderStatus,
@@ -62,6 +62,7 @@ interface OrderDetailData {
     phone: string;
     email?: string | null;
   } | null;
+  invoice?: InvoiceData | null;
 }
 
 interface AuditLogEntry {
@@ -457,6 +458,107 @@ function AdminOrderDetailContent() {
                   </span>
                 </div>
               </div>
+            </div>
+
+            {/* GST Tax Invoice Card (F15) */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <span>🧾</span>
+                  <span>GST Tax Invoice (F15)</span>
+                </h2>
+                {order.invoice ? (
+                  <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                    Issued
+                  </span>
+                ) : (
+                  <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                    Pending Delivery
+                  </span>
+                )}
+              </div>
+
+              {order.invoice ? (
+                <div className="space-y-3">
+                  <div className="rounded-xl bg-slate-50 p-3 text-xs space-y-1.5 border border-slate-100">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Invoice No:</span>
+                      <span className="font-mono font-bold text-slate-900">{order.invoice.invoice_no}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Invoice Date:</span>
+                      <span className="font-medium text-slate-800">
+                        {new Date(order.invoice.invoice_date).toLocaleString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Seller GSTIN:</span>
+                      <span className="font-mono text-slate-700">{order.invoice.seller_gstin}</span>
+                    </div>
+                    <div className="border-t border-slate-200 pt-1.5 grid grid-cols-3 gap-2 text-[11px] text-slate-600">
+                      <div>
+                        <span className="block text-slate-400">Taxable</span>
+                        <span className="font-semibold">{formatPaise(order.invoice.taxable_amount_paise)}</span>
+                      </div>
+                      <div>
+                        <span className="block text-slate-400">GST (CGST+SGST)</span>
+                        <span className="font-semibold">{formatPaise(order.invoice.gst_amount_paise)}</span>
+                      </div>
+                      <div>
+                        <span className="block text-slate-400">Total Invoice</span>
+                        <span className="font-bold text-emerald-700">{formatPaise(order.invoice.total_paise)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <a
+                    href={`${API_BASE_URL}/invoices/${order.invoice.invoice_no}/pdf`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 transition-colors"
+                  >
+                    <span>📄</span>
+                    <span>Download Tax Invoice PDF</span>
+                  </a>
+
+                  {/* Credit Notes if issued */}
+                  {order.invoice.credit_notes && order.invoice.credit_notes.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                      <h3 className="text-xs font-bold text-rose-800 flex items-center gap-1">
+                        <span>↩️</span>
+                        <span>Credit Notes ({order.invoice.credit_notes.length})</span>
+                      </h3>
+                      {order.invoice.credit_notes.map((cn) => (
+                        <div key={cn.id} className="rounded-xl bg-rose-50 border border-rose-200 p-2.5 text-xs space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono font-bold text-rose-900">{cn.credit_note_no}</span>
+                            <span className="font-bold text-rose-700">{formatPaise(cn.total_paise)}</span>
+                          </div>
+                          <p className="text-[11px] text-rose-600">Reason: {cn.reason}</p>
+                          <a
+                            href={`${API_BASE_URL}/credit-notes/${cn.credit_note_no}/pdf`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 hover:underline"
+                          >
+                            <span>📄 Download Credit Note PDF &rarr;</span>
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400 italic">
+                  Tax invoice will be generated automatically with sequential FY numbering once this order reaches DELIVERED.
+                </p>
+              )}
             </div>
 
             {/* Notifications & Shop WhatsApp Card (F14) */}
