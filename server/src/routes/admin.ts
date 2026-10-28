@@ -12,6 +12,7 @@ import {
   STATUS_LABELS,
 } from '../lib/orderStatus.js';
 import { dispatchOrderStatusNotifications, retryNotification } from '../lib/notifications.js';
+import { generateOrderInvoice, generateCreditNote } from '../lib/invoice.js';
 
 export const adminRouter = Router();
 
@@ -80,6 +81,35 @@ export async function requireAdminAuth(req: Request, res: Response, next: NextFu
   } catch (error) {
     console.error('requireAdminAuth error:', error);
     return res.status(500).json({ error: 'Authentication verification failed' });
+  }
+}
+
+/**
+ * Helper to retrieve currently authenticated admin user if valid session exists.
+ */
+export async function getAuthenticatedAdmin(req: Request) {
+  try {
+    const token =
+      req.cookies?.[ADMIN_COOKIE_NAME] ||
+      (req.headers.authorization?.startsWith('Bearer ')
+        ? req.headers.authorization.slice(7).trim()
+        : null) ||
+      (typeof req.headers['x-admin-token'] === 'string' ? req.headers['x-admin-token'] : null);
+
+    if (!token) return null;
+
+    const session = await prisma.adminSession.findUnique({
+      where: { token },
+      include: { admin_user: true },
+    });
+
+    if (!session || session.expires_at < new Date() || !session.admin_user.is_active) {
+      return null;
+    }
+
+    return session.admin_user;
+  } catch {
+    return null;
   }
 }
 
@@ -529,6 +559,11 @@ adminRouter.get('/admin/orders/:id', requireAdminAuth, async (req: Request, res:
         },
         delivery: true,
         user: true,
+        invoice: {
+          include: {
+            credit_notes: true,
+          },
+        },
       },
     });
 
@@ -691,6 +726,24 @@ adminRouter.patch('/admin/orders/:id/status', requireAdminAuth, async (req: Requ
       await dispatchOrderStatusNotifications(updatedOrder.id, targetStatus);
     } catch (notifErr) {
       console.error('[Notification] Error dispatching status notifications:', notifErr);
+    }
+
+    // F15: Automatically generate GST Invoice when DELIVERED
+    if (targetStatus === 'DELIVERED') {
+      try {
+        await generateOrderInvoice(updatedOrder.id);
+      } catch (invErr) {
+        console.error('[Invoice] Error generating GST invoice upon DELIVERED:', invErr);
+      }
+    }
+
+    // F15: Automatically generate Credit Note when CANCELLED if invoice exists
+    if (targetStatus === 'CANCELLED') {
+      try {
+        await generateCreditNote(updatedOrder.id, reason || 'Order Cancelled');
+      } catch (cnErr) {
+        console.error('[Invoice] Error generating Credit Note upon CANCELLED:', cnErr);
+      }
     }
 
     res.status(200).json({

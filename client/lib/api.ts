@@ -88,6 +88,40 @@ export interface DeliveryData {
   cod_collected_paise: number;
 }
 
+export interface CreditNoteData {
+  id: string;
+  invoice_id: string;
+  credit_note_no: string;
+  reason: string;
+  taxable_amount_paise: number;
+  gst_amount_paise: number;
+  total_paise: number;
+  pdf_url?: string | null;
+  created_at: string;
+}
+
+export interface InvoiceData {
+  id: string;
+  order_id: string;
+  invoice_no: string;
+  invoice_date: string;
+  seller_name: string;
+  seller_gstin: string;
+  seller_fssai?: string | null;
+  buyer_name: string;
+  buyer_phone?: string | null;
+  buyer_address: any;
+  delivery_fee_paise: number;
+  taxable_amount_paise: number;
+  gst_amount_paise: number;
+  total_paise: number;
+  cgst_paise: number;
+  sgst_paise: number;
+  items_snapshot: any[];
+  pdf_url?: string | null;
+  credit_notes?: CreditNoteData[];
+}
+
 export interface OrderData {
   id: string;
   order_no: string;
@@ -109,6 +143,7 @@ export interface OrderData {
   created_at: string;
   items: OrderItemData[];
   delivery?: DeliveryData | null;
+  invoice?: InvoiceData | null;
 }
 
 export interface UserData {

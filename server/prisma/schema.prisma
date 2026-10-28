@@ -398,17 +398,47 @@ model Payout {
 }
 
 model Invoice {
-  id                  String   @id @default(uuid())
-  order_id            String   @unique
-  invoice_no          String   @unique
-  invoice_date        DateTime @default(now())
+  id                  String       @id @default(uuid())
+  order_id            String       @unique
+  invoice_no          String       @unique
+  invoice_date        DateTime     @default(now())
+  seller_name         String       @default("PlukIt Quick Commerce Private Limited")
+  seller_gstin        String       @default("27AABCP1234F1Z6")
+  seller_fssai        String?      @default("11526000000000")
+  buyer_name          String       @default("")
+  buyer_phone         String?
+  buyer_address       Json         @default("{}")
+  delivery_fee_paise  Int          @default(0)
   taxable_amount_paise Int
   gst_amount_paise    Int
+  total_paise         Int          @default(0)
+  cgst_paise          Int          @default(0)
+  sgst_paise          Int          @default(0)
+  igst_paise          Int          @default(0)
+  items_snapshot      Json         @default("[]")
   pdf_url             String?
 
-  order               Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  order               Order        @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  credit_notes        CreditNote[]
 
   @@map("invoices")
+}
+
+model CreditNote {
+  id                   String   @id @default(uuid())
+  invoice_id           String
+  credit_note_no       String   @unique
+  reason               String
+  taxable_amount_paise Int
+  gst_amount_paise     Int
+  total_paise          Int
+  pdf_url              String?
+  created_at           DateTime @default(now())
+
+  invoice              Invoice  @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
+
+  @@index([invoice_id])
+  @@map("credit_notes")
 }
 
 model SupportTicket {

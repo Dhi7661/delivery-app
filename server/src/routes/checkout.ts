@@ -404,6 +404,11 @@ checkoutRouter.get('/orders/:orderNo', async (req: Request, res: Response) => {
           },
         },
         delivery: true,
+        invoice: {
+          include: {
+            credit_notes: true,
+          },
+        },
         user: {
           select: {
             id: true,

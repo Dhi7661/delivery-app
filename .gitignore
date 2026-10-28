@@ -23,6 +23,10 @@ yarn-error.log*
 pnpm-debug.log*
 *.log
 
+# Generated invoice PDFs
+server/public/invoices/*.pdf
+!server/public/invoices/.gitkeep
+
 # OS / Editor
 .DS_Store
 Thumbs.db
