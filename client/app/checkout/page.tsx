@@ -9,6 +9,7 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { formatPaise } from '@/lib/money';
 import { API_BASE_URL, SavedAddress } from '@/lib/api';
+import { THEME_TOKENS } from '@/lib/brand';
 
 const SERVICEABLE_PINCODE = '411001';
 const COD_MAX_LIMIT_PAISE = 100000; // ₹1,000
@@ -254,7 +255,7 @@ export default function CheckoutPage() {
               name: name.trim(),
               contact: cleanPhone,
             },
-            theme: { color: '#059669' },
+            theme: { color: THEME_TOKENS.primary },
             config: {
               display: {
                 blocks: {
