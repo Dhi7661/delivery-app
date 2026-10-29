@@ -204,18 +204,9 @@ export default function SearchPage() {
 
                     {/* Middle: Info */}
                     <div className="flex flex-col min-w-0 flex-1">
-                      {hasDiscount ? (
-                        <span className="self-start rounded-[6px] bg-saffron px-1.5 py-0.5 text-[10px] font-extrabold text-on-saffron uppercase tracking-wide">
-                          {discountPercent}% OFF
-                        </span>
-                      ) : (
-                        <span className="self-start rounded-[6px] bg-chip px-1.5 py-0.5 text-[10px] font-bold text-muted uppercase tracking-wide">
-                          Daily Fresh
-                        </span>
-                      )}
                       <Link
                         href={`/product/${prod.id}`}
-                        className="mt-1 text-sm font-bold text-heading hover:text-primary leading-snug truncate"
+                        className="text-sm font-bold text-heading hover:text-primary leading-snug truncate"
                       >
                         {prod.name}
                       </Link>

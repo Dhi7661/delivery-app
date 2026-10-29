@@ -141,12 +141,6 @@ function NavLinks() {
           >
             <div className="relative">
               {tab.icon(isActive)}
-              {tab.name === 'Cart' && hasCartItems && (
-                <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-saffron" />
-              )}
-              {tab.name === 'Orders' && isOrderActive && (
-                <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-saffron" />
-              )}
             </div>
             <span className="mt-1 text-[11px] leading-tight truncate">
               {tab.name}

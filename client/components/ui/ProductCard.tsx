@@ -50,10 +50,6 @@ export default function ProductCard({ product, className = '' }: ProductCardProp
                 Out of stock
               </span>
             </div>
-          ) : hasDiscount ? (
-            <span className="absolute left-2 top-2 rounded-[6px] bg-saffron px-2 py-0.5 text-[10px] font-extrabold text-on-saffron shadow-xs uppercase tracking-wide">
-              {discountPercent}% OFF
-            </span>
           ) : null}
         </div>
 
