@@ -155,17 +155,15 @@ export default function CartPage() {
                     </div>
                   </div>
 
-                  {/* Right: Stepper and Remove Icon */}
+                  {/* Right: Stepper and Remove Link */}
                   <div className="flex flex-col items-end justify-between gap-2 shrink-0">
                     <button
                       type="button"
                       onClick={() => removeItem(item.product_id)}
                       aria-label={`Remove ${item.name}`}
-                      className="flex h-7 w-7 items-center justify-center rounded-[8px] text-muted hover:text-primary hover:bg-surface transition-colors"
+                      className="text-[11px] font-semibold text-muted underline decoration-primary hover:text-primary transition-colors cursor-pointer py-1"
                     >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
+                      Remove
                     </button>
 
                     <div className="w-28">
@@ -258,19 +256,14 @@ export default function CartPage() {
           <div className="mx-auto flex max-w-md items-center justify-between gap-4">
             <div className="flex flex-col">
               <span className="text-[10px] font-extrabold uppercase text-muted">To Pay</span>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-base font-black text-heading">
-                  {formatPaise(cart.total_paise)}
-                </span>
-                <span className="text-[11px] font-bold text-primary">
-                  Save ₹40
-                </span>
-              </div>
+              <span className="text-base font-black text-heading">
+                {formatPaise(cart.total_paise)}
+              </span>
             </div>
-            <div className="flex-1 max-w-[220px]">
+            <div className="flex-1 max-w-[250px]">
               <Link href="/checkout">
-                <Button variant="primary" size="md" fullWidth>
-                  Proceed to Checkout &rarr;
+                <Button variant="primary" size="md" fullWidth className="min-h-[44px]">
+                  Proceed to Checkout &bull; {formatPaise(cart.total_paise)} &rarr;
                 </Button>
               </Link>
             </div>
