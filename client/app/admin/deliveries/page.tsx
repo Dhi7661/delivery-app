@@ -281,7 +281,7 @@ export default function AdminDeliveriesPage() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-slate-500 font-medium">Verifying delivery credentials...</p>
         </div>
       </div>
@@ -326,11 +326,11 @@ export default function AdminDeliveriesPage() {
               </span>
             </div>
 
-            <div className="rounded-xl bg-emerald-950/70 border border-emerald-800/60 p-2">
-              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">
+            <div className="rounded-xl bg-primary/70 border border-primary/60 p-2">
+              <span className="text-[10px] font-bold text-primary uppercase tracking-wider block">
                 Collected
               </span>
-              <span className="text-sm font-black text-emerald-300 block mt-0.5">
+              <span className="text-sm font-black text-primary block mt-0.5">
                 {formatPaise(summary.collectedCashPaise)}
               </span>
             </div>
@@ -340,8 +340,8 @@ export default function AdminDeliveriesPage() {
                 summary.differencePaise === 0
                   ? 'bg-slate-800/80 border-slate-700 text-slate-200'
                   : summary.differencePaise > 0
-                  ? 'bg-emerald-950/80 border-emerald-700 text-emerald-300'
-                  : 'bg-rose-950/80 border-rose-700 text-rose-300'
+                  ? 'bg-primary/80 border-primary text-primary'
+                  : 'bg-surface border-border text-primary'
               }`}
             >
               <span className="text-[10px] font-bold uppercase tracking-wider block opacity-80">
@@ -373,7 +373,7 @@ export default function AdminDeliveriesPage() {
             {dateFilter && (
               <button
                 onClick={() => setDateFilter('')}
-                className="text-[11px] font-bold text-rose-600 hover:underline px-1"
+                className="text-[11px] font-bold text-primary hover:underline px-1"
               >
                 Today
               </button>
@@ -395,7 +395,7 @@ export default function AdminDeliveriesPage() {
                   onClick={() => setFilterTab(tab.id as any)}
                   className={`flex flex-col items-center justify-center rounded-xl py-2 px-1 text-center transition-all min-h-[46px] border cursor-pointer ${
                     isSelected
-                      ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs ring-2 ring-emerald-600'
+                      ? 'bg-primary text-white border-primary shadow-xs ring-2 ring-primary'
                       : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                   }`}
                 >
@@ -411,10 +411,10 @@ export default function AdminDeliveriesPage() {
 
         {/* Global Error Banner */}
         {actionError && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 flex items-start gap-2 animate-fade-in">
-            <span className="text-rose-600 font-bold">⚠️</span>
+          <div className="rounded-xl border border-border bg-surface p-3 text-xs text-heading flex items-start gap-2 animate-fade-in">
+            <span className="text-primary font-bold">⚠️</span>
             <span className="flex-1 font-medium">{actionError}</span>
-            <button onClick={() => setActionError(null)} className="font-bold text-rose-700">
+            <button onClick={() => setActionError(null)} className="font-bold text-primary">
               ✕
             </button>
           </div>
@@ -423,7 +423,7 @@ export default function AdminDeliveriesPage() {
         {/* Deliveries List */}
         {loading ? (
           <div className="flex min-h-[260px] flex-col items-center justify-center text-slate-400">
-            <div className="h-8 w-8 animate-spin rounded-full border-3 border-emerald-600 border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-3 border-primary border-t-transparent" />
             <span className="mt-3 text-xs font-medium">Loading deliveries...</span>
           </div>
         ) : deliveries.length === 0 ? (
@@ -459,7 +459,7 @@ export default function AdminDeliveriesPage() {
                       <div>
                         <Link
                           href={`/admin/orders/${order.id}`}
-                          className="font-black text-sm text-slate-900 hover:text-emerald-700 underline"
+                          className="font-black text-sm text-slate-900 hover:text-primary underline"
                         >
                           {order.order_no}
                         </Link>
@@ -485,9 +485,9 @@ export default function AdminDeliveriesPage() {
                   </div>
 
                   {/* Address & Pincode Pill */}
-                  <div className="rounded-xl bg-emerald-50/70 border border-emerald-200/80 p-2.5 text-xs text-slate-800 space-y-1">
+                  <div className="rounded-xl bg-chip/70 border border-primary/80 p-2.5 text-xs text-slate-800 space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-extrabold uppercase text-emerald-900 flex items-center gap-1">
+                      <span className="text-[11px] font-extrabold uppercase text-primary flex items-center gap-1">
                         <span>📍</span>
                         <span>Pune Camp ({pincode})</span>
                       </span>
@@ -522,7 +522,7 @@ export default function AdminDeliveriesPage() {
                       <button
                         onClick={() => handleStartDelivery(order.id)}
                         disabled={isActioning}
-                        className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-md transition-all active:scale-98 cursor-pointer"
+                        className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary hover:bg-primary text-white font-extrabold text-sm shadow-md transition-all active:scale-98 cursor-pointer"
                       >
                         <span>🛵</span>
                         <span>{isActioning ? 'Starting...' : 'Start Delivery (Dispatch)'}</span>
@@ -533,7 +533,7 @@ export default function AdminDeliveriesPage() {
                       <div className="flex flex-col gap-2">
                         <button
                           onClick={() => openDeliveredModal(order)}
-                          className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm shadow-md transition-all active:scale-98 cursor-pointer"
+                          className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary hover:bg-primary text-white font-black text-sm shadow-md transition-all active:scale-98 cursor-pointer"
                         >
                           <span>✅</span>
                           <span>Delivered &bull; Collect {formatPaise(order.total_paise)}</span>
@@ -545,7 +545,7 @@ export default function AdminDeliveriesPage() {
                             setFailedReason('no answer');
                             setFailedNote('');
                           }}
-                          className="flex min-h-[40px] w-full items-center justify-center gap-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-200 transition-all cursor-pointer"
+                          className="flex min-h-[40px] w-full items-center justify-center gap-1.5 rounded-xl bg-surface hover:bg-chip text-primary font-bold text-xs border border-border transition-all cursor-pointer"
                         >
                           <span>⚠️</span>
                           <span>Mark Delivery Failed</span>
@@ -569,15 +569,15 @@ export default function AdminDeliveriesPage() {
                     )}
 
                     {order.status === 'DELIVERED' && (
-                      <div className="rounded-xl bg-emerald-50 p-2.5 text-xs text-emerald-900 border border-emerald-200 space-y-1">
+                      <div className="rounded-xl bg-chip p-2.5 text-xs text-primary border border-primary space-y-1">
                         <div className="flex items-center justify-between font-bold">
                           <span>✓ Delivered successfully</span>
-                          <span className="text-emerald-800">
+                          <span className="text-primary">
                             Cash: {formatPaise(order.delivery?.cod_collected_paise || order.total_paise)}
                           </span>
                         </div>
                         {order.delivery?.cash_note && (
-                          <p className="text-[11px] text-emerald-700 italic">
+                          <p className="text-[11px] text-primary italic">
                             Note: &ldquo;{order.delivery.cash_note}&rdquo;
                           </p>
                         )}
@@ -585,9 +585,9 @@ export default function AdminDeliveriesPage() {
                     )}
 
                     {order.status === 'FAILED_DELIVERY' && (
-                      <div className="rounded-xl bg-rose-50 p-2.5 text-xs text-rose-900 border border-rose-200">
+                      <div className="rounded-xl bg-surface p-2.5 text-xs text-heading border border-border">
                         <span className="font-bold block">Delivery Failed</span>
-                        <span className="text-[11px] text-rose-700">
+                        <span className="text-[11px] text-primary">
                           {order.delivery?.failure_reason || 'Attempt failed'}
                         </span>
                       </div>
@@ -625,7 +625,7 @@ export default function AdminDeliveriesPage() {
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
                 Total Amount Due (COD)
               </span>
-              <span className="text-2xl font-black text-emerald-700 block mt-0.5">
+              <span className="text-2xl font-black text-primary block mt-0.5">
                 {formatPaise(cashModalOrder.total_paise)}
               </span>
             </div>
@@ -633,9 +633,9 @@ export default function AdminDeliveriesPage() {
             {/* Cash Collected Input */}
             <div>
               <label htmlFor="cash-collected" className="block text-xs font-bold text-slate-700 mb-1">
-                Cash Amount Collected (₹) <span className="text-rose-500">*</span>
+                Cash Amount Collected (₹) <span className="text-primary">*</span>
               </label>
-              <div className="flex rounded-xl border border-slate-200 overflow-hidden focus-within:border-emerald-600 focus-within:ring-1 focus-within:ring-emerald-600 min-h-[48px]">
+              <div className="flex rounded-xl border border-slate-200 overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary min-h-[48px]">
                 <span className="flex items-center bg-slate-50 px-3 text-sm font-bold text-slate-500 border-r border-slate-200">
                   ₹
                 </span>
@@ -666,7 +666,7 @@ export default function AdminDeliveriesPage() {
                       </span>
                     </div>
                     <label htmlFor="cash-diff-note" className="block text-[11px] font-bold text-amber-800">
-                      Explanation Note <span className="text-rose-600">* Required</span>
+                      Explanation Note <span className="text-primary">* Required</span>
                     </label>
                     <textarea
                       id="cash-diff-note"
@@ -681,7 +681,7 @@ export default function AdminDeliveriesPage() {
                 );
               }
               return (
-                <p className="text-[11px] text-emerald-700 font-medium">
+                <p className="text-[11px] text-primary font-medium">
                   ✓ Collected amount matches exact order total.
                 </p>
               );
@@ -699,7 +699,7 @@ export default function AdminDeliveriesPage() {
               <button
                 type="submit"
                 disabled={submittingDelivery}
-                className="flex-1 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black text-white shadow-md hover:bg-emerald-700 min-h-[48px] flex items-center justify-center active:scale-98 cursor-pointer"
+                className="flex-1 rounded-xl bg-primary px-4 py-2 text-xs font-black text-white shadow-md hover:bg-primary min-h-[48px] flex items-center justify-center active:scale-98 cursor-pointer"
               >
                 {submittingDelivery ? 'Recording...' : 'Confirm Delivery & Cash'}
               </button>
@@ -738,7 +738,7 @@ export default function AdminDeliveriesPage() {
                   key={r.id}
                   className={`flex items-center gap-2.5 rounded-xl border p-2.5 text-xs font-bold transition-colors cursor-pointer min-h-[44px] ${
                     failedReason === r.id
-                      ? 'border-rose-600 bg-rose-50 text-rose-900'
+                      ? 'border-border bg-surface text-heading'
                       : 'border-slate-200 hover:bg-slate-50 text-slate-700'
                   }`}
                 >
@@ -748,7 +748,7 @@ export default function AdminDeliveriesPage() {
                     value={r.id}
                     checked={failedReason === r.id}
                     onChange={(e) => setFailedReason(e.target.value)}
-                    className="h-4 w-4 text-rose-600 focus:ring-rose-500"
+                    className="h-4 w-4 text-primary focus:ring-primary"
                   />
                   <span>{r.label}</span>
                 </label>
@@ -765,7 +765,7 @@ export default function AdminDeliveriesPage() {
                 placeholder="E.g. Called twice at 2:15 PM and 2:30 PM, no response at gate"
                 value={failedNote}
                 onChange={(e) => setFailedNote(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 p-2 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-rose-500 focus:outline-hidden"
+                className="w-full rounded-xl border border-slate-200 p-2 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-border focus:outline-hidden"
               />
             </div>
 
@@ -780,7 +780,7 @@ export default function AdminDeliveriesPage() {
               <button
                 type="submit"
                 disabled={submittingFailed}
-                className="flex-1 rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-rose-700 min-h-[48px] flex items-center justify-center active:scale-98 cursor-pointer"
+                className="flex-1 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-primary min-h-[48px] flex items-center justify-center active:scale-98 cursor-pointer"
               >
                 {submittingFailed ? 'Submitting...' : 'Submit Delivery Failure'}
               </button>

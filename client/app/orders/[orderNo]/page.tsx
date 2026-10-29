@@ -183,12 +183,12 @@ function OrderTrackingContent() {
             </div>
 
             {order.status === 'PAYMENT_FAILED' && (
-              <div className="rounded-[14px] border border-danger/40 bg-surface p-3 flex items-center justify-between gap-2">
-                <span className="text-xs text-danger font-semibold">
+              <div className="rounded-[14px] border border-border bg-surface p-3 flex items-center justify-between gap-2">
+                <span className="text-xs text-primary font-semibold">
                   UPI payment was cancelled or failed.
                 </span>
                 <Link href="/checkout">
-                  <Button variant="dangerOutline" size="sm">
+                  <Button variant="outline" size="sm">
                     Retry
                   </Button>
                 </Link>
@@ -232,7 +232,7 @@ function OrderTrackingContent() {
                   </div>
 
                   {phoneError && (
-                    <p className="text-[11px] font-semibold text-danger">
+                    <p className="text-[11px] font-semibold text-primary">
                       {phoneError}
                     </p>
                   )}

@@ -204,7 +204,7 @@ function AdminOrderDetailContent() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-slate-500 font-medium">Verifying admin access...</p>
         </div>
       </div>
@@ -235,10 +235,10 @@ function AdminOrderDetailContent() {
 
         {/* Error Alert */}
         {error && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 flex items-start gap-2 animate-fade-in">
-            <span className="text-rose-600 font-bold">⚠️</span>
+          <div className="rounded-xl border border-border bg-surface p-3 text-xs text-heading flex items-start gap-2 animate-fade-in">
+            <span className="text-primary font-bold">⚠️</span>
             <span className="flex-1 font-medium">{error}</span>
-            <button onClick={() => setError(null)} className="font-bold text-rose-700">
+            <button onClick={() => setError(null)} className="font-bold text-primary">
               ✕
             </button>
           </div>
@@ -246,7 +246,7 @@ function AdminOrderDetailContent() {
 
         {loading || !order ? (
           <div className="flex min-h-[300px] flex-col items-center justify-center text-slate-400">
-            <div className="h-8 w-8 animate-spin rounded-full border-3 border-emerald-600 border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-3 border-primary border-t-transparent" />
             <span className="mt-3 text-xs font-medium">Loading order details...</span>
           </div>
         ) : (
@@ -309,8 +309,8 @@ function AdminOrderDetailContent() {
                               }}
                               className={`rounded-xl px-3.5 py-2.5 text-xs font-bold transition-all min-h-[44px] flex items-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer ${
                                 isCancel
-                                  ? 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
-                                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                  ? 'bg-surface text-primary border border-border hover:bg-chip'
+                                  : 'bg-primary text-white hover:bg-primary'
                               } ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                               <span>{isCancel ? '✕' : '➜'}</span>
@@ -349,7 +349,7 @@ function AdminOrderDetailContent() {
                   {order.guest_phone || order.user?.phone ? (
                     <a
                       href={`tel:${order.guest_phone || order.user?.phone}`}
-                      className="font-bold text-emerald-700 hover:underline text-sm inline-flex items-center gap-1"
+                      className="font-bold text-primary hover:underline text-sm inline-flex items-center gap-1"
                     >
                       <span>📞</span>
                       <span>{order.guest_phone || order.user?.phone}</span>
@@ -371,7 +371,7 @@ function AdminOrderDetailContent() {
                     Landmark: {order.address.landmark}
                   </p>
                 )}
-                <p className="font-bold text-emerald-800 text-[11px]">
+                <p className="font-bold text-primary text-[11px]">
                   Pune Camp — Pincode {order.address.pincode}
                 </p>
               </div>
@@ -384,13 +384,13 @@ function AdminOrderDetailContent() {
                       Delivery Tracking: {order.delivery.status}
                     </span>
                     {order.delivery.failure_reason && (
-                      <span className="text-[11px] text-rose-700 block">
+                      <span className="text-[11px] text-primary block">
                         Reason: {order.delivery.failure_reason}
                       </span>
                     )}
                   </div>
                   {order.delivery.delivered_at && (
-                    <span className="text-[11px] text-emerald-700 font-semibold">
+                    <span className="text-[11px] text-primary font-semibold">
                       Delivered: {new Date(order.delivery.delivered_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   )}
@@ -417,7 +417,7 @@ function AdminOrderDetailContent() {
                       <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
                         <span>{item.product.unit_size}</span>
                         <span>&bull;</span>
-                        <span className="text-emerald-700 font-medium">{item.shop.name}</span>
+                        <span className="text-primary font-medium">{item.shop.name}</span>
                       </div>
                       <span className="text-[11px] text-slate-400">
                         {item.qty} × {formatPaise(item.selling_price_paise)}
@@ -443,7 +443,7 @@ function AdminOrderDetailContent() {
                 <div className="flex justify-between">
                   <span>Delivery Fee</span>
                   {order.delivery_fee_paise === 0 ? (
-                    <span className="font-bold text-emerald-600">FREE</span>
+                    <span className="font-bold text-primary">FREE</span>
                   ) : (
                     <span className="font-semibold text-slate-800">
                       {formatPaise(order.delivery_fee_paise)}
@@ -453,7 +453,7 @@ function AdminOrderDetailContent() {
 
                 <div className="border-t border-slate-100 pt-2 flex justify-between text-base font-black text-slate-900">
                   <span>Total Payable</span>
-                  <span className="text-emerald-700">
+                  <span className="text-primary">
                     {formatPaise(order.total_paise)}
                   </span>
                 </div>
@@ -468,7 +468,7 @@ function AdminOrderDetailContent() {
                   <span>GST Tax Invoice (F15)</span>
                 </h2>
                 {order.invoice ? (
-                  <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                  <span className="rounded-md bg-chip px-2 py-0.5 text-[10px] font-bold text-primary border border-primary">
                     Issued
                   </span>
                 ) : (
@@ -512,7 +512,7 @@ function AdminOrderDetailContent() {
                       </div>
                       <div>
                         <span className="block text-slate-400">Total Invoice</span>
-                        <span className="font-bold text-emerald-700">{formatPaise(order.invoice.total_paise)}</span>
+                        <span className="font-bold text-primary">{formatPaise(order.invoice.total_paise)}</span>
                       </div>
                     </div>
                   </div>
@@ -521,7 +521,7 @@ function AdminOrderDetailContent() {
                     href={`${API_BASE_URL}/invoices/${order.invoice.invoice_no}/pdf`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 transition-colors"
+                    className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-xs font-bold text-white shadow-xs hover:bg-primary transition-colors"
                   >
                     <span>📄</span>
                     <span>Download Tax Invoice PDF</span>
@@ -530,22 +530,22 @@ function AdminOrderDetailContent() {
                   {/* Credit Notes if issued */}
                   {order.invoice.credit_notes && order.invoice.credit_notes.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
-                      <h3 className="text-xs font-bold text-rose-800 flex items-center gap-1">
+                      <h3 className="text-xs font-bold text-heading flex items-center gap-1">
                         <span>↩️</span>
                         <span>Credit Notes ({order.invoice.credit_notes.length})</span>
                       </h3>
                       {order.invoice.credit_notes.map((cn) => (
-                        <div key={cn.id} className="rounded-xl bg-rose-50 border border-rose-200 p-2.5 text-xs space-y-1.5">
+                        <div key={cn.id} className="rounded-xl bg-surface border border-border p-2.5 text-xs space-y-1.5">
                           <div className="flex items-center justify-between">
-                            <span className="font-mono font-bold text-rose-900">{cn.credit_note_no}</span>
-                            <span className="font-bold text-rose-700">{formatPaise(cn.total_paise)}</span>
+                            <span className="font-mono font-bold text-heading">{cn.credit_note_no}</span>
+                            <span className="font-bold text-primary">{formatPaise(cn.total_paise)}</span>
                           </div>
-                          <p className="text-[11px] text-rose-600">Reason: {cn.reason}</p>
+                          <p className="text-[11px] text-primary">Reason: {cn.reason}</p>
                           <a
                             href={`${API_BASE_URL}/credit-notes/${cn.credit_note_no}/pdf`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 hover:underline"
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline"
                           >
                             <span>📄 Download Credit Note PDF &rarr;</span>
                           </a>
@@ -570,7 +570,7 @@ function AdminOrderDetailContent() {
                 </h2>
                 <Link
                   href="/admin/notifications"
-                  className="text-[11px] font-bold text-emerald-700 hover:underline"
+                  className="text-[11px] font-bold text-primary hover:underline"
                 >
                   All Logs &rarr;
                 </Link>
@@ -588,7 +588,7 @@ function AdminOrderDetailContent() {
                         key={n.id}
                         className={`rounded-xl border p-3 text-xs space-y-2 ${
                           isFailed
-                            ? 'border-red-200 bg-red-50/50'
+                            ? 'border-border bg-surface/50'
                             : 'border-slate-100 bg-slate-50/50'
                         }`}
                       >
@@ -598,7 +598,7 @@ function AdminOrderDetailContent() {
                               className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
                                 n.recipient_type === 'SHOP'
                                   ? 'bg-amber-100 text-amber-800'
-                                  : 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-chip text-primary'
                               }`}
                             >
                               {n.recipient_type}
@@ -611,9 +611,9 @@ function AdminOrderDetailContent() {
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                               n.status === 'SENT'
-                                ? 'bg-emerald-100 text-emerald-800'
+                                ? 'bg-chip text-primary'
                                 : n.status === 'FAILED'
-                                ? 'bg-red-100 text-red-800'
+                                ? 'bg-chip text-primary'
                                 : 'bg-amber-100 text-amber-800'
                             }`}
                           >
@@ -626,7 +626,7 @@ function AdminOrderDetailContent() {
                         </div>
 
                         {isFailed && n.last_error && (
-                          <div className="text-[10px] text-red-700 bg-red-100/60 p-1.5 rounded-md">
+                          <div className="text-[10px] text-primary bg-chip/60 p-1.5 rounded-md">
                             Error: {n.last_error}
                           </div>
                         )}
@@ -647,7 +647,7 @@ function AdminOrderDetailContent() {
                                 href={n.metadata.whatsapp_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-1 px-2.5 py-1 min-h-[32px] bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-[11px] shadow-xs active:scale-95 transition-all cursor-pointer"
+                                className="flex items-center gap-1 px-2.5 py-1 min-h-[32px] bg-primary hover:bg-primary text-white font-bold rounded-lg text-[11px] shadow-xs active:scale-95 transition-all cursor-pointer"
                               >
                                 <span>💬</span>
                                 <span>Send WhatsApp</span>
@@ -673,7 +673,7 @@ function AdminOrderDetailContent() {
                                     setRetryingNotifId(null);
                                   }
                                 }}
-                                className="px-2.5 py-1 min-h-[32px] bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-[11px] active:scale-95 cursor-pointer disabled:opacity-50"
+                                className="px-2.5 py-1 min-h-[32px] bg-primary hover:bg-primary text-white font-bold rounded-lg text-[11px] active:scale-95 cursor-pointer disabled:opacity-50"
                               >
                                 {retryingNotifId === n.id ? 'Retrying...' : 'Retry Send'}
                               </button>
@@ -697,7 +697,7 @@ function AdminOrderDetailContent() {
               {auditLogs.length === 0 ? (
                 <p className="text-xs text-slate-400 italic">No status transitions recorded yet.</p>
               ) : (
-                <div className="relative pl-4 space-y-3 border-l-2 border-emerald-500/30">
+                <div className="relative pl-4 space-y-3 border-l-2 border-primary/30">
                   {auditLogs.map((log) => {
                     const oldStatus = log.old_value?.status || 'INITIAL';
                     const newStatus = log.new_value?.status || 'UPDATED';
@@ -705,11 +705,11 @@ function AdminOrderDetailContent() {
 
                     return (
                       <div key={log.id} className="relative text-xs space-y-1">
-                        <div className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white" />
+                        <div className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-primary border-2 border-white" />
 
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-bold text-slate-800">
-                            {oldStatus} &rarr; <span className="text-emerald-700">{newStatus}</span>
+                            {oldStatus} &rarr; <span className="text-primary">{newStatus}</span>
                           </span>
                           <span className="text-[10px] text-slate-400 shrink-0">
                             {new Date(log.created_at).toLocaleTimeString('en-IN', {
@@ -764,7 +764,7 @@ function AdminOrderDetailContent() {
               placeholder="E.g. Customer cancelled via phone / unreachable / out of stock"
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-rose-500 focus:outline-hidden"
+              className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-border focus:outline-hidden"
             />
 
             <div className="flex items-center justify-end gap-2 pt-1">
@@ -779,7 +779,7 @@ function AdminOrderDetailContent() {
                 type="button"
                 disabled={updating}
                 onClick={() => handleStatusChange('CANCELLED', cancelReason)}
-                className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-rose-700 min-h-[40px] flex items-center justify-center active:scale-95 cursor-pointer"
+                className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-primary min-h-[40px] flex items-center justify-center active:scale-95 cursor-pointer"
               >
                 {updating ? 'Cancelling...' : 'Confirm Cancellation'}
               </button>
@@ -797,7 +797,7 @@ export default function AdminOrderDetailPage() {
       fallback={
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
             <p className="text-sm text-slate-500 font-medium">Loading order details...</p>
           </div>
         </div>

@@ -414,8 +414,8 @@ export default function CheckoutPage() {
 
             {/* Error Message Box */}
             {errorMessage && (
-              <div className="rounded-[14px] border border-danger/40 bg-surface p-3 text-xs text-danger flex items-start gap-2">
-                <span className="text-danger text-sm font-bold">⚠️</span>
+              <div className="rounded-[14px] border border-border bg-surface p-3 text-xs text-primary flex items-start gap-2">
+                <span className="text-primary text-sm font-bold">⚠️</span>
                 <span className="flex-1 font-semibold">{errorMessage}</span>
               </div>
             )}
@@ -450,7 +450,7 @@ export default function CheckoutPage() {
                 {/* Full Name */}
                 <div>
                   <label htmlFor="checkout-name" className="block text-xs font-bold text-heading mb-1">
-                    Full Name <span className="text-danger">*</span>
+                    Full Name <span className="text-primary">*</span>
                   </label>
                   <input
                     id="checkout-name"
@@ -466,7 +466,7 @@ export default function CheckoutPage() {
                 {/* Mobile Phone */}
                 <div>
                   <label htmlFor="checkout-phone" className="block text-xs font-bold text-heading mb-1">
-                    Mobile Number <span className="text-danger">*</span>
+                    Mobile Number <span className="text-primary">*</span>
                   </label>
                   <div className="flex rounded-[12px] border border-border overflow-hidden focus-within:border-primary min-h-[44px]">
                     <span className="flex items-center bg-chip px-3 text-xs font-bold text-muted border-r border-border">
@@ -585,7 +585,7 @@ export default function CheckoutPage() {
                 <div className="space-y-3 pt-1">
                   <div>
                     <label htmlFor="checkout-address" className="block text-xs font-bold text-heading mb-1">
-                      Delivery Address <span className="text-danger">*</span>
+                      Delivery Address <span className="text-primary">*</span>
                     </label>
                     <textarea
                       id="checkout-address"
@@ -614,7 +614,7 @@ export default function CheckoutPage() {
 
                   <div>
                     <label htmlFor="checkout-pincode" className="block text-xs font-bold text-heading mb-1">
-                      Delivery Pincode <span className="text-danger">*</span>
+                      Delivery Pincode <span className="text-primary">*</span>
                     </label>
                     <input
                       id="checkout-pincode"
@@ -628,7 +628,7 @@ export default function CheckoutPage() {
                       className="w-full rounded-[12px] border border-border bg-card px-3 py-2.5 text-sm font-medium text-text placeholder-muted focus:border-primary focus:outline-hidden min-h-[44px]"
                     />
                     {pincode !== SERVICEABLE_PINCODE ? (
-                      <span className="mt-1 block text-[11px] font-semibold text-danger">
+                      <span className="mt-1 block text-[11px] font-semibold text-primary">
                         ⚠️ PlukIt currently only delivers to pincode {SERVICEABLE_PINCODE}.
                       </span>
                     ) : (
@@ -892,7 +892,7 @@ export default function CheckoutPage() {
 
                 <Button
                   type="button"
-                  variant="dangerOutline"
+                  variant="outline"
                   fullWidth
                   disabled={simulating}
                   onClick={handleSimulateUpiFailure}

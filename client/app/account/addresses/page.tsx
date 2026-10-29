@@ -214,7 +214,7 @@ export default function SavedAddressesPage() {
             </div>
 
             {formError && (
-              <div className="rounded-[12px] border border-danger/40 bg-surface p-3 text-xs text-danger font-medium">
+              <div className="rounded-[12px] border border-border bg-surface p-3 text-xs text-primary font-medium">
                 ⚠️ {formError}
               </div>
             )}
@@ -222,7 +222,7 @@ export default function SavedAddressesPage() {
             <form onSubmit={handleSave} className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-heading mb-1">
-                  Complete Address <span className="text-danger">*</span>
+                  Complete Address <span className="text-primary">*</span>
                 </label>
                 <textarea
                   required
@@ -394,7 +394,7 @@ export default function SavedAddressesPage() {
                     <button
                       type="button"
                       onClick={() => handleDelete(addr.id)}
-                      className="text-xs font-bold text-danger hover:underline cursor-pointer"
+                      className="text-xs font-bold text-muted hover:text-primary underline cursor-pointer"
                     >
                       Delete
                     </button>

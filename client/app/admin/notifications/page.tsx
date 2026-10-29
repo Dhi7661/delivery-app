@@ -133,11 +133,11 @@ export default function AdminNotificationsPage() {
 
         {/* Action Message Banner */}
         {actionMessage && (
-          <div className="p-3 rounded-xl bg-emerald-950 border border-emerald-800 text-emerald-300 text-xs font-semibold flex items-center justify-between">
+          <div className="p-3 rounded-xl bg-primary border border-primary text-primary text-xs font-semibold flex items-center justify-between">
             <span>{actionMessage}</span>
             <button
               onClick={() => setActionMessage(null)}
-              className="text-emerald-400 hover:text-white font-bold ml-2 cursor-pointer"
+              className="text-primary hover:text-white font-bold ml-2 cursor-pointer"
             >
               ✕
             </button>
@@ -152,13 +152,13 @@ export default function AdminNotificationsPage() {
               onClick={() => setFilterStatus(st)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors min-h-[36px] flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                 filterStatus === st
-                  ? 'bg-emerald-600 text-white shadow-sm'
+                  ? 'bg-primary text-white shadow-sm'
                   : 'bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700'
               }`}
             >
               <span>{st}</span>
               {st === 'FAILED' && failedCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full bg-red-600 text-white text-[10px]">
+                <span className="px-1.5 py-0.2 rounded-full bg-primary text-white text-[10px]">
                   {failedCount}
                 </span>
               )}
@@ -169,7 +169,7 @@ export default function AdminNotificationsPage() {
         {/* Notification List */}
         {loading ? (
           <div className="flex min-h-[250px] flex-col items-center justify-center text-slate-400">
-            <div className="h-8 w-8 animate-spin rounded-full border-3 border-emerald-500 border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-3 border-primary border-t-transparent" />
             <span className="mt-3 text-xs font-medium">Loading notifications...</span>
           </div>
         ) : notifications.length === 0 ? (
@@ -194,7 +194,7 @@ export default function AdminNotificationsPage() {
                   key={item.id}
                   className={`rounded-2xl border p-4 space-y-2.5 transition-all ${
                     isFailed
-                      ? 'border-red-900/80 bg-red-950/20 shadow-xs'
+                      ? 'border-border/80 bg-primary/20 shadow-xs'
                       : 'border-slate-800 bg-slate-800/60 shadow-xs'
                   }`}
                 >
@@ -206,7 +206,7 @@ export default function AdminNotificationsPage() {
                         className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
                           isShop
                             ? 'bg-amber-950 text-amber-300 border border-amber-800'
-                            : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                            : 'bg-primary text-primary border border-primary'
                         }`}
                       >
                         {item.recipient_type}
@@ -228,9 +228,9 @@ export default function AdminNotificationsPage() {
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                         item.status === 'SENT'
-                          ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700'
+                          ? 'bg-primary/60 text-primary border border-primary'
                           : item.status === 'FAILED'
-                          ? 'bg-red-900/80 text-red-200 border border-red-700'
+                          ? 'bg-primary/80 text-primary border border-border'
                           : 'bg-amber-900/60 text-amber-300 border border-amber-700'
                       }`}
                     >
@@ -255,7 +255,7 @@ export default function AdminNotificationsPage() {
                     {item.order && (
                       <Link
                         href={`/admin/orders/${item.order.id}`}
-                        className="font-mono text-emerald-400 hover:underline font-bold text-[11px]"
+                        className="font-mono text-primary hover:underline font-bold text-[11px]"
                       >
                         #{item.order.order_no} &rarr;
                       </Link>
@@ -269,7 +269,7 @@ export default function AdminNotificationsPage() {
 
                   {/* Error Box if Failed */}
                   {isFailed && item.last_error && (
-                    <div className="rounded-lg bg-red-950/40 p-2 text-[11px] text-red-300 border border-red-900/50">
+                    <div className="rounded-lg bg-primary/40 p-2 text-[11px] text-primary border border-border/50">
                       <strong>Failure Reason: </strong> {item.last_error}
                     </div>
                   )}
@@ -285,7 +285,7 @@ export default function AdminNotificationsPage() {
                           href={item.metadata.whatsapp_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 px-3 py-1.5 min-h-[36px] bg-green-700 hover:bg-green-600 text-white font-bold rounded-lg text-xs shadow-xs active:scale-95 transition-all cursor-pointer"
+                          className="flex items-center gap-1.5 px-3 py-1.5 min-h-[36px] bg-primary hover:bg-primary text-white font-bold rounded-lg text-xs shadow-xs active:scale-95 transition-all cursor-pointer"
                         >
                           <span>💬</span>
                           <span>Send WhatsApp</span>
@@ -297,7 +297,7 @@ export default function AdminNotificationsPage() {
                         <button
                           onClick={() => handleRetry(item.id)}
                           disabled={retryingId === item.id}
-                          className="flex items-center gap-1 px-3 py-1.5 min-h-[36px] bg-red-700 hover:bg-red-600 text-white font-bold rounded-lg text-xs shadow-xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                          className="flex items-center gap-1 px-3 py-1.5 min-h-[36px] bg-primary hover:bg-primary text-white font-bold rounded-lg text-xs shadow-xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
                         >
                           <span>↻</span>
                           <span>{retryingId === item.id ? 'Retrying...' : 'Retry'}</span>

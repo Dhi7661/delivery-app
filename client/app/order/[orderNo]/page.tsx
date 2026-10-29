@@ -106,7 +106,7 @@ function OrderDetailsContent() {
           {order.status === 'PAYMENT_PENDING' ? (
             <span className="text-2xl">⏳</span>
           ) : order.status === 'PAYMENT_FAILED' ? (
-            <span className="text-2xl text-danger">✕</span>
+            <span className="text-2xl text-primary">✕</span>
           ) : (
             <svg className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />

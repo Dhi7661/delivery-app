@@ -337,8 +337,8 @@ export default function AccountPage() {
             </div>
 
             {errorMessage && (
-              <div className="rounded-[14px] border border-danger/40 bg-surface p-3 text-xs text-danger flex items-start gap-2">
-                <span className="text-danger font-bold text-sm">⚠️</span>
+              <div className="rounded-[14px] border border-border bg-surface p-3 text-xs text-primary flex items-start gap-2">
+                <span className="text-primary font-bold text-sm">⚠️</span>
                 <span className="flex-1 font-semibold">{errorMessage}</span>
               </div>
             )}
