@@ -150,7 +150,7 @@ function CategoryContent() {
                 <svg className="h-4 w-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
-                <span className="truncate">Direct morning harvest from Saswad &amp; Junnar</span>
+                <span className="truncate">Fresh morning harvest from Saswad &amp; Junnar</span>
               </div>
               <span className="text-[11px] font-bold text-muted shrink-0 ml-2">6 AM Batch</span>
             </div>
@@ -178,7 +178,7 @@ function CategoryContent() {
 
             {/* Custom note callout matching category.png */}
             <div className="mt-6 rounded-[14px] border border-border bg-surface p-3.5 text-center text-xs text-muted shadow-2xs">
-              Need custom chopping or specific tenderness? Add note during checkout for Kothrud delivery partner.
+              Need custom chopping or specific tenderness? Add note during checkout for our delivery partner.
             </div>
           </div>
         )}

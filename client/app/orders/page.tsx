@@ -139,10 +139,6 @@ export default function OrdersPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs font-extrabold tracking-wider uppercase text-muted">
                   <span>Active Delivery</span>
-                  <span className="flex items-center gap-1 text-saffron text-[11px] font-bold lowercase">
-                    <span className="h-2 w-2 rounded-full bg-saffron" />
-                    live
-                  </span>
                 </div>
               </div>
             )}

@@ -149,7 +149,7 @@ function ProductContent() {
                 <svg className="h-3.5 w-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                 </svg>
-                <span>Direct Mandi Batch</span>
+                <span>Fresh Mandi Batch</span>
               </span>
             </div>
 
@@ -164,7 +164,7 @@ function ProductContent() {
               </p>
             </div>
 
-            {/* Price Row with savings chip */}
+            {/* Price Row */}
             <div className="flex items-baseline gap-2.5 py-0.5">
               <span className="text-2xl font-black text-heading">
                 {formatPaise(product.selling_price_paise)}
@@ -259,7 +259,7 @@ function ProductContent() {
             <div className="rounded-[18px] border border-border bg-card p-4 shadow-2xs space-y-3.5">
               <div className="flex items-center justify-between border-b border-border/40 pb-2.5">
                 <span className="text-xs font-extrabold text-heading">Neighborhood Assurance</span>
-                <span className="text-[11px] font-bold text-primary">🛡️ Kothrud Fresh</span>
+                <span className="text-[11px] font-bold text-primary">🛡️ Farm Fresh</span>
               </div>
 
               <div className="flex items-start gap-3">
@@ -300,7 +300,7 @@ function ProductContent() {
                 <div>
                   <h3 className="text-xs font-bold text-heading">Trusted Pune Delivery</h3>
                   <p className="text-[11px] font-medium text-muted leading-tight mt-0.5">
-                    Hand-delivered directly by our dedicated local Kothrud delivery champion.
+                    Hand-delivered by our dedicated local delivery champion.
                   </p>
                 </div>
               </div>

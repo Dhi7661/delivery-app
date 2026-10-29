@@ -242,7 +242,7 @@ export default function CheckoutPage() {
           return;
         }
 
-        // Live test mode keys: load Razorpay checkout script
+        // Test mode keys: load Razorpay checkout script
         const scriptLoaded = await loadRazorpayScript();
         if (scriptLoaded && (window as any).Razorpay) {
           const rzp = new (window as any).Razorpay({
@@ -391,8 +391,8 @@ export default function CheckoutPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               <div className="leading-snug">
-                Delivering to: <strong className="font-bold">Kothrud, Pune ({SERVICEABLE_PINCODE})</strong>
-                <span className="block text-[11px] font-medium text-muted">20-25 mins hyper-local kirana delivery</span>
+                Delivering to: <strong className="font-bold">Pune ({SERVICEABLE_PINCODE})</strong>
+                <span className="block text-[11px] font-medium text-muted">20-25 mins hyper-local delivery</span>
               </div>
             </div>
 
@@ -633,7 +633,7 @@ export default function CheckoutPage() {
                       </span>
                     ) : (
                       <span className="mt-1 block text-[11px] font-semibold text-primary">
-                        ✓ Serviceable area: Kothrud, Pune ({SERVICEABLE_PINCODE})
+                        ✓ Serviceable area: Pune ({SERVICEABLE_PINCODE})
                       </span>
                     )}
                   </div>
@@ -697,14 +697,11 @@ export default function CheckoutPage() {
                     <div className="flex items-center justify-between gap-1 flex-wrap">
                       <div className="flex items-center gap-1.5">
                         <span className="text-sm font-bold text-heading">UPI Options</span>
-                        <span className="rounded-[6px] bg-saffron px-1.5 py-0.5 text-[9px] font-extrabold text-on-saffron uppercase">
-                          INSTANT
-                        </span>
                       </div>
                       <span className="text-primary text-sm font-bold">✓</span>
                     </div>
                     <p className="mt-0.5 text-xs text-muted">
-                      GPay, PhonePe, Paytm, QR. Safe &amp; direct.
+                      GPay, PhonePe, Paytm, QR. Safe and secure.
                     </p>
                   </div>
                 </div>
@@ -763,7 +760,7 @@ export default function CheckoutPage() {
                       </span>
                     </div>
                     <p className="mt-0.5 text-xs text-muted">
-                      All major Indian banks &amp; Rupay (use UPI for instant kirana dispatch)
+                      All major Indian banks &amp; Rupay (use UPI for fast dispatch)
                     </p>
                   </div>
                 </div>
@@ -787,16 +784,6 @@ export default function CheckoutPage() {
                   <span className="text-heading font-bold">
                     {formatPaise(cart.subtotal_paise)}
                   </span>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-1.5">
-                    <svg className="h-3.5 w-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                    </svg>
-                    <span>Store Savings Discount</span>
-                  </div>
-                  <span className="font-extrabold text-primary">-₹40</span>
                 </div>
 
                 <div className="flex justify-between">

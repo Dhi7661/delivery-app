@@ -143,21 +143,21 @@ export default function AccountPage() {
                 </div>
               </div>
 
-              {/* Verified Kirana Regular Badge matching account.png */}
+              {/* Verified Customer Badge */}
               <div className="rounded-[12px] border border-border bg-surface p-2.5 flex items-center gap-2 text-xs font-semibold text-heading">
                 <svg className="h-4 w-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                 </svg>
-                <span>Kothrud Regular &bull; 24 Orders &bull; Since Nov 2022</span>
+                <span>Valued Customer &bull; 24 Orders &bull; Since Nov 2022</span>
               </div>
             </div>
 
-            {/* 2. Two-Column Stats Cards matching account.png */}
+            {/* 2. Two-Column Stats Cards */}
             <div className="grid grid-cols-2 gap-3">
-              {/* Seasonal Savings Impact */}
+              {/* Quarterly Trips Saved */}
               <div className="flex flex-col justify-between rounded-[20px] border border-border bg-card p-3.5 shadow-2xs">
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted">
-                  Seasonal Savings Impact
+                  Quarterly Trips Saved
                 </span>
                 <div className="mt-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface border border-border text-primary">
@@ -170,10 +170,10 @@ export default function AccountPage() {
                 </div>
               </div>
 
-              {/* Kothrud Mandi Benchmark */}
+              {/* Mandi Price Benchmark */}
               <div className="flex flex-col justify-between rounded-[20px] border border-border bg-card p-3.5 shadow-2xs">
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted">
-                  Kothrud Mandi Benchmark
+                  Mandi Price Benchmark
                 </span>
                 <div className="mt-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-saffron/20 border border-saffron/40 text-on-saffron">
@@ -187,7 +187,7 @@ export default function AccountPage() {
               </div>
             </div>
 
-            {/* 3. Delivery Destination matching account.png */}
+            {/* 3. Delivery Destination */}
             <div className="space-y-2">
               <h3 className="text-xs font-extrabold uppercase tracking-wider text-muted">
                 Delivery Destination
@@ -204,7 +204,7 @@ export default function AccountPage() {
                       <span className="rounded-full bg-chip px-2 py-0.5 text-[10px] font-bold text-muted uppercase">Default</span>
                     </div>
                     <p className="mt-1 text-xs text-text font-medium leading-relaxed">
-                      Flat 402, Mayur Colony, Kothrud - 411038, Pune
+                      Flat 402, Mayur Colony, Pune - 411001
                     </p>
                     <p className="mt-0.5 text-[11px] text-muted">
                       Drop Note: Leave with security gate if ring unanswered
@@ -221,7 +221,7 @@ export default function AccountPage() {
               </div>
             </div>
 
-            {/* 4. Account Preferences & Services matching account.png */}
+            {/* 4. Account Preferences & Services */}
             <div className="space-y-2">
               <h3 className="text-xs font-extrabold uppercase tracking-wider text-muted">
                 Account Preferences &amp; Services
@@ -243,8 +243,7 @@ export default function AccountPage() {
                   <span className="text-muted text-sm">&rsaquo;</span>
                 </div>
 
-
-                {/* 3. Notifications & Delivery Alerts */}
+                {/* 2. Notifications & Delivery Alerts */}
                 <div className="flex items-center justify-between p-3.5 hover:bg-surface cursor-pointer transition-colors">
                   <div className="flex items-center gap-3">
                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface border border-border text-primary">
@@ -260,23 +259,7 @@ export default function AccountPage() {
                   <span className="text-muted text-sm">&rsaquo;</span>
                 </div>
 
-                {/* 4. Language / भाषा */}
-                <div className="flex items-center justify-between p-3.5 hover:bg-surface cursor-pointer transition-colors">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface border border-border text-primary">
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-                      </svg>
-                    </span>
-                    <div>
-                      <span className="text-xs font-bold text-heading block">Language / भाषा</span>
-                      <span className="text-[11px] text-muted">English / मराठी (Marathi)</span>
-                    </div>
-                  </div>
-                  <span className="text-muted text-sm">&rsaquo;</span>
-                </div>
-
-                {/* 5. Help & Neighbourhood Support */}
+                {/* 3. Help & Neighbourhood Support */}
                 <div className="flex items-center justify-between p-3.5 hover:bg-surface cursor-pointer transition-colors">
                   <div className="flex items-center gap-3">
                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface border border-border text-primary">
@@ -286,13 +269,13 @@ export default function AccountPage() {
                     </span>
                     <div>
                       <span className="text-xs font-bold text-heading block">Help &amp; Neighbourhood Support</span>
-                      <span className="text-[11px] text-muted">Call or chat with Kothrud desk</span>
+                      <span className="text-[11px] text-muted">Call or chat with support desk</span>
                     </div>
                   </div>
                   <span className="text-muted text-sm">&rsaquo;</span>
                 </div>
 
-                {/* 6. About BRAND_NAME & Farm Partners */}
+                {/* 4. About BRAND_NAME & Farm Partners */}
                 <div className="flex items-center justify-between p-3.5 hover:bg-surface cursor-pointer transition-colors">
                   <div className="flex items-center gap-3">
                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface border border-border text-primary">
@@ -302,7 +285,7 @@ export default function AccountPage() {
                     </span>
                     <div>
                       <span className="text-xs font-bold text-heading block">About {BRAND_NAME} &amp; Farm Partners</span>
-                      <span className="text-[11px] text-muted">Direct sourcing from Junnar &amp; Saswad</span>
+                      <span className="text-[11px] text-muted">Sourcing from local farms and mandis</span>
                     </div>
                   </div>
                   <span className="text-muted text-sm">&rsaquo;</span>
@@ -310,7 +293,7 @@ export default function AccountPage() {
               </div>
             </div>
 
-            {/* 5. Logout Button matching account.png */}
+            {/* 5. Logout Button */}
             <div className="pt-2">
               <button
                 type="button"
@@ -324,10 +307,10 @@ export default function AccountPage() {
               </button>
             </div>
 
-            {/* 6. Trust Footer matching account.png */}
+            {/* 6. Trust Footer */}
             <div className="text-center pt-2 pb-4 space-y-0.5 text-muted">
               <p className="text-xs font-semibold text-heading">
-                {BRAND_NAME} &bull; Crafted with local trust for Kothrud
+                {BRAND_NAME} &bull; Crafted with local trust
               </p>
               <p className="text-[11px] font-medium">
                 App version 2.4.1 (Pune Build)

@@ -166,10 +166,10 @@ export default function Home() {
               id="popular-heading"
               className="text-base font-black tracking-tight text-heading sm:text-lg"
             >
-              Popular in Kothrud
+              Popular Products
             </h2>
             <p className="mt-0.5 text-xs font-semibold text-muted">
-              Top pantry staples ordered near Paud Road &amp; Dahanukar
+              Top pantry staples ordered daily
             </p>
           </div>
 

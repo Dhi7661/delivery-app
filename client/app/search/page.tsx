@@ -139,7 +139,7 @@ export default function SearchPage() {
               <svg className="h-3.5 w-3.5 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
-              <span>Direct Farm Batch</span>
+              <span>Fresh Farm Batch</span>
             </button>
           </div>
         </div>
@@ -210,7 +210,7 @@ export default function SearchPage() {
                         </span>
                       ) : (
                         <span className="self-start rounded-[6px] bg-chip px-1.5 py-0.5 text-[10px] font-bold text-muted uppercase tracking-wide">
-                          Kothrud Special
+                          Daily Fresh
                         </span>
                       )}
                       <Link
@@ -261,17 +261,17 @@ export default function SearchPage() {
           </div>
         ) : null}
 
-        {/* Trending in Kothrud Section (Persistent matching search.png) */}
+        {/* Trending Section */}
         <div className="space-y-4 pt-1">
           <div>
             <div className="flex items-center gap-1.5 text-heading">
               <svg className="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
-              <h2 className="text-sm font-extrabold">Trending in Kothrud</h2>
+              <h2 className="text-sm font-extrabold">Trending Searches</h2>
             </div>
             <p className="mt-0.5 text-xs font-medium text-muted">
-              Frequently ordered by societies near Paud Road &amp; Ideal Colony
+              Frequently ordered daily essentials
             </p>
 
             <div className="mt-3 flex flex-wrap gap-2">

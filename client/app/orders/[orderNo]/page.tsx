@@ -128,14 +128,14 @@ function OrderTrackingContent() {
       <Header
         variant="track-order"
         title={`Track Order #${order ? order.order_no : orderNo}`}
-        subtitle={`${BRAND_NAME} • Kothrud Hub`}
+        subtitle={`${BRAND_NAME} • Delivery Hub`}
       />
 
       <main className="mx-auto w-full max-w-md flex-1 px-4 py-4 space-y-4">
         {loading ? (
           <div className="flex min-h-[400px] flex-col items-center justify-center text-muted">
             <div className="h-9 w-9 animate-spin rounded-full border-3 border-primary border-t-transparent" />
-            <span className="mt-3 text-sm font-semibold">Fetching live order status...</span>
+            <span className="mt-3 text-sm font-semibold">Fetching order status...</span>
           </div>
         ) : error || !order ? (
           <div className="flex min-h-[400px] flex-col items-center justify-center text-center px-4">
@@ -174,7 +174,7 @@ function OrderTrackingContent() {
                 <span className="truncate">18 mins away</span>
                 <span className="text-muted font-normal">•</span>
                 <span className="font-semibold text-muted truncate">
-                  Kothrud {order.address?.pincode || '411038'}
+                  Pune {order.address?.pincode || '411038'}
                 </span>
               </div>
               <span className="shrink-0 rounded-full bg-saffron/20 border border-saffron/40 px-3 py-0.5 text-xs font-extrabold text-on-saffron">
@@ -250,19 +250,19 @@ function OrderTrackingContent() {
                 </div>
                 <h3 className="text-sm font-bold text-heading">Order Protected</h3>
                 <p className="text-xs text-muted max-w-xs mx-auto leading-relaxed">
-                  For customer privacy and security, delivery address, items, and live tracking are hidden until phone ownership is confirmed.
+                  For customer privacy and security, delivery address, items, and tracking details are hidden until phone ownership is confirmed.
                 </p>
               </div>
             ) : (
               <>
-                {/* 1. Live Transit Path Card matching track-order.png */}
+                {/* 1. Transit Path Card matching track-order.png */}
                 <div className="rounded-[20px] border border-border bg-card p-4 shadow-2xs space-y-3">
                   <div className="flex items-center justify-between border-b border-border/40 pb-2.5">
                     <div className="flex items-center gap-2 text-sm font-extrabold text-heading">
                       <svg className="h-4 w-4 text-primary shrink-0 -rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                       </svg>
-                      <span>Live Transit Path</span>
+                      <span>Transit Path</span>
                     </div>
                     <span className="text-xs font-semibold text-muted">Paud Rd &rarr; Mayur Colony</span>
                   </div>
@@ -454,7 +454,7 @@ function OrderTrackingContent() {
                     <div className="flex-1 min-w-0">
                       <h3 className="text-xs font-extrabold text-heading">Delivery Address</h3>
                       <p className="mt-1 text-xs font-bold text-heading leading-snug">
-                        {order.address?.line1 || 'Flat 402, Mayur Colony, Kothrud'}
+                        {order.address?.line1 || 'Flat 402, Mayur Colony, Pune'}
                       </p>
                       <p className="text-xs text-muted font-medium">
                         Pune, Maharashtra {order.address?.pincode || '411038'}

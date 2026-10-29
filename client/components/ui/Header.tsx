@@ -30,7 +30,7 @@ export default function Header({
   title,
   subtitle,
   pincode = '411038',
-  locationLabel = 'Kothrud, Pune',
+  locationLabel = 'Pune',
   showChips = true,
   rightElement,
   variant = 'default',
@@ -125,7 +125,7 @@ export default function Header({
                 d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
               />
             </svg>
-            <span>{pincode} Kothrud</span>
+            <span>{pincode} Pune</span>
           </div>
           {etaPill}
         </div>
@@ -222,7 +222,7 @@ export default function Header({
                   d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
                 />
               </svg>
-              <span>Kothrud {pincode}</span>
+              <span>Pune {pincode}</span>
             </div>
             {etaPill}
           </div>
@@ -404,7 +404,7 @@ export default function Header({
                 {title || 'Track Order'}
               </h1>
               <span className="text-[11px] font-semibold text-muted leading-tight truncate">
-                {subtitle || `${BRAND_NAME} \u2022 Kothrud Hub`}
+                {subtitle || `${BRAND_NAME} \u2022 Delivery Hub`}
               </span>
             </div>
           </div>

@@ -25,7 +25,7 @@ export default function CartPage() {
       <Header
         showBack
         title="My Basket"
-        subtitle={cart && cart.item_count > 0 ? `${cart.item_count} ${cart.item_count === 1 ? 'item' : 'items'} • Kothrud, Pune` : undefined}
+        subtitle={cart && cart.item_count > 0 ? `${cart.item_count} ${cart.item_count === 1 ? 'item' : 'items'} • Pune` : undefined}
       />
 
       <main className="mx-auto w-full max-w-md flex-1 px-4 py-4 space-y-4">
@@ -66,7 +66,7 @@ export default function CartPage() {
                   </svg>
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-bold text-heading truncate">Delivering to Kothrud</span>
+                  <span className="text-xs font-bold text-heading truncate">Delivering to Pune</span>
                   <span className="text-[11px] font-medium text-muted truncate">Mayur Colony • 411038</span>
                 </div>
               </div>
@@ -223,18 +223,6 @@ export default function CartPage() {
                   </span>
                 </div>
 
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-1.5">
-                    <svg className="h-3.5 w-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                    </svg>
-                    <span>Mandi Savings</span>
-                  </div>
-                  <span className="rounded-[6px] bg-saffron px-1.5 py-0.5 text-[10px] font-extrabold text-on-saffron">
-                    -₹40
-                  </span>
-                </div>
-
                 <div className="flex justify-between">
                   <span>Delivery Partner Fee</span>
                   {cart.delivery_fee_paise === 0 ? (
@@ -249,17 +237,9 @@ export default function CartPage() {
                   )}
                 </div>
 
-                <div className="flex justify-between">
-                  <span>Handling &amp; Paper Bag</span>
-                  <span className="font-extrabold text-primary">Waived</span>
-                </div>
-
                 <div className="border-t border-border/50 pt-2.5 flex items-baseline justify-between text-base font-black text-heading">
                   <div>
                     <span>Total Payable</span>
-                    <span className="block text-[10px] font-bold text-primary mt-0.5">
-                      Total savings of ₹40 on this kirana order
-                    </span>
                   </div>
                   <span className="text-lg">
                     {formatPaise(cart.total_paise)}

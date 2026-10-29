@@ -133,7 +133,7 @@ function OrderDetailsContent() {
             ? 'Your UPI payment request has been received. Your order will be confirmed automatically once verified.'
             : order.status === 'PAYMENT_FAILED'
             ? 'Your payment was declined or cancelled. You can retry with UPI or Cash on Delivery.'
-            : 'Your neighbourhood store in Kothrud has received your order and is packing fresh produce.'}
+            : 'Your neighbourhood store has received your order and is packing fresh produce.'}
         </p>
 
         {/* Copy Order Number */}
@@ -278,7 +278,7 @@ function OrderDetailsContent() {
       <div className="space-y-2.5 pt-1">
         <Link href={`/orders/${order.order_no}`}>
           <Button variant="primary" size="lg" fullWidth>
-            Track Live Delivery &rarr;
+            Track Order &rarr;
           </Button>
         </Link>
         <Link href="/">
@@ -297,7 +297,7 @@ function OrderDetailsContent() {
           <span>Gharachya kiranadukaana sarkha vishwas</span>
         </div>
         <p className="text-[11px] font-medium text-muted">
-          Mayur Colony, Pune &bull; Direct Kirana Dispatch
+          Mayur Colony, Pune
         </p>
       </div>
     </div>
