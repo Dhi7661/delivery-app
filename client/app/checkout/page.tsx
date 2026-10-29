@@ -660,50 +660,6 @@ export default function CheckoutPage() {
               )}
             </div>
 
-            {/* Delivery Speed Card matching checkout.png */}
-            <div className="rounded-[18px] border border-border bg-card p-4 shadow-2xs space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted">
-                  Delivery Speed
-                </h2>
-                <span className="rounded-[6px] bg-saffron px-2 py-0.5 text-[10px] font-extrabold text-on-saffron uppercase">
-                  KOTHRUD EXPRESS
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                {/* Instant Kirana Option */}
-                <div className="rounded-[14px] border-2 border-primary bg-surface p-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-4 w-4 items-center justify-center rounded-full border-2 border-primary bg-card">
-                      <div className="h-2 w-2 rounded-full bg-primary" />
-                    </div>
-                    <div>
-                      <span className="text-xs font-bold text-heading block">Instant Kirana (20–25 mins)</span>
-                      <span className="text-[11px] font-medium text-muted">Packed right now at Ideal Colony store</span>
-                    </div>
-                  </div>
-                  <span className="text-xs font-extrabold text-primary">FREE</span>
-                </div>
-
-                {/* Morning Slot Option */}
-                <div className="rounded-[14px] border border-border bg-card p-3 flex items-center justify-between opacity-80">
-                  <div className="flex items-center gap-2.5">
-                    <div className="h-4 w-4 rounded-full border border-border bg-card" />
-                    <div>
-                      <span className="text-xs font-bold text-heading block">
-                        Morning Slot (Tomorrow 6:30 AM – 8:00 AM)
-                      </span>
-                      <span className="text-[11px] font-medium text-muted">
-                        Includes fresh chakki atta milling
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-xs font-bold text-muted">FREE</span>
-                </div>
-              </div>
-            </div>
-
             {/* Payment Method Section matching checkout.png */}
             <div className="rounded-[18px] border border-border bg-card p-4 shadow-2xs space-y-3">
               <div className="flex items-center justify-between">
@@ -869,7 +825,7 @@ export default function CheckoutPage() {
                 </svg>
               </div>
               <span className="leading-snug">
-                Handpicked fresh from your trusted Paud Road Kirana Mandi. Zero questions return at your doorstep.
+                Handpicked fresh from your trusted neighbourhood kirana. Zero questions return at your doorstep.
               </span>
             </div>
 
