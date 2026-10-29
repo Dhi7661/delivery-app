@@ -223,8 +223,9 @@ export default function OrdersPage() {
 
                         <Link href={`/orders/${order.order_no}`}>
                           <Button
-                            variant={isLive ? 'primary' : 'outline'}
+                            variant="primary"
                             size="sm"
+                            className="min-h-[44px] px-4 font-bold"
                           >
                             Track Order &rarr;
                           </Button>
