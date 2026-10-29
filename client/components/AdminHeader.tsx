@@ -40,7 +40,7 @@ export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps)
       : 'orders');
 
   return (
-    <header className="sticky top-0 z-30 bg-slate-900 text-white border-b border-slate-800 shadow-md">
+    <nav aria-label="Admin Navigation" className="sticky top-0 z-30 bg-slate-900 text-white border-b border-slate-800 shadow-md">
       {/* Top Bar */}
       <div className="mx-auto max-w-lg px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -121,6 +121,6 @@ export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps)
           <span>Notifications</span>
         </Link>
       </div>
-    </header>
+    </nav>
   );
 }

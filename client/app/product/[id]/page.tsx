@@ -64,19 +64,8 @@ function ProductContent() {
     <div className="flex min-h-screen flex-col bg-background text-text antialiased pb-32">
       {/* Top Header */}
       <Header
-        variant="product"
         title={product?.name || 'Product Details'}
-        onShare={() => {
-          if (navigator.share && product) {
-            navigator
-              .share({
-                title: product.name,
-                text: `Check out ${product.name} on ${BRAND_NAME}`,
-                url: window.location.href,
-              })
-              .catch(() => {});
-          }
-        }}
+        showBack
       />
 
       <main className="mx-auto w-full max-w-md flex-1 px-4 py-4 space-y-4">

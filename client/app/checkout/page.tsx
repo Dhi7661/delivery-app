@@ -351,8 +351,8 @@ export default function CheckoutPage() {
       className="flex min-h-screen flex-col bg-background text-text antialiased"
     >
       <Header
-        variant="checkout"
-        title="Review &amp; Checkout"
+        title="Checkout"
+        showBack
       />
 
       <main className="mx-auto w-full max-w-md flex-1 px-4 py-4 space-y-4">

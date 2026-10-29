@@ -81,8 +81,8 @@ function CategoryContent() {
     <div className="flex min-h-screen flex-col bg-background text-text antialiased pb-28">
       {/* Top Header matching category.png with 2-row layout */}
       <Header
-        variant="category"
-        title={category?.name || 'Fresh Vegetables'}
+        title={category?.name || 'Category'}
+        showBack
       />
 
       <main className="mx-auto w-full max-w-md flex-1 px-4 py-3 space-y-4">

@@ -66,8 +66,8 @@ export default function OrdersPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-text antialiased pb-28">
-      {/* Top Header matching orders.png with 2-row layout */}
-      <Header variant="orders" />
+      {/* Top Header */}
+      <Header title="My Orders" showBack={false} />
 
       <main className="mx-auto w-full max-w-md flex-1 px-4 py-4 space-y-4">
         {/* Title row matching orders.png */}

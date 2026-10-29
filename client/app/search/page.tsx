@@ -75,11 +75,11 @@ export default function SearchPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-text antialiased pb-28">
-      {/* Top Header with store icon, location pill, and ETA chip */}
-      <Header />
+      {/* Top Header */}
+      <Header title="Search" showBack={false} />
 
-      {/* Search Bar matching search.png */}
-      <div className="sticky top-[57px] z-30 w-full border-b border-border bg-background/95 px-4 py-3 backdrop-blur-md">
+      {/* Search Bar */}
+      <div className="sticky top-[56px] z-30 w-full border-b border-border bg-background/95 px-4 py-3 backdrop-blur-md">
         <div className="mx-auto max-w-md">
           <div className="relative flex items-center">
             <svg

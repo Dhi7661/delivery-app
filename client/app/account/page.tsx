@@ -100,8 +100,8 @@ export default function AccountPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-text antialiased pb-28">
-      {/* Top Header matching account.png */}
-      <Header variant="account" />
+      {/* Top Header */}
+      <Header title="My Account" showBack={false} />
 
       <main className="mx-auto w-full max-w-md flex-1 px-4 py-4 space-y-4">
         {/* Title row matching account.png */}

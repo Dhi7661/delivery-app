@@ -21,11 +21,10 @@ export default function CartPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-text antialiased pb-32">
-      {/* Top Header matching cart.png */}
+      {/* Top Header */}
       <Header
         showBack
         title="My Basket"
-        subtitle={cart && cart.item_count > 0 ? `${cart.item_count} ${cart.item_count === 1 ? 'item' : 'items'} • Pune` : undefined}
       />
 
       <main className="mx-auto w-full max-w-md flex-1 px-4 py-4 space-y-4">

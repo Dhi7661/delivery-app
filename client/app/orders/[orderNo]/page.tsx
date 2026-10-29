@@ -126,9 +126,8 @@ function OrderTrackingContent() {
   return (
     <div className="flex min-h-screen flex-col bg-background text-text antialiased pb-28">
       <Header
-        variant="track-order"
-        title={`Track Order #${order ? order.order_no : orderNo}`}
-        subtitle={`${BRAND_NAME} • Delivery Hub`}
+        title="Track Order"
+        showBack
       />
 
       <main className="mx-auto w-full max-w-md flex-1 px-4 py-4 space-y-4">

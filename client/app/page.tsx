@@ -9,6 +9,7 @@ import CategoryTile from '@/components/ui/CategoryTile';
 import ProductCard from '@/components/ui/ProductCard';
 import SectionHeading from '@/components/ui/SectionHeading';
 import { API_BASE_URL, Category, ProductSummary } from '@/lib/api';
+import { DELIVERY_ETA_TEXT } from '@/lib/brand';
 
 export default function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -94,7 +95,15 @@ export default function Home() {
       </div>
 
       {/* Main Content */}
-      <main className="mx-auto w-full max-w-md flex-1 px-4 py-3 space-y-5">
+      <main className="mx-auto w-full max-w-md flex-1 px-4 py-3 space-y-4">
+        {/* Delivery ETA Chip */}
+        <div className="flex items-center gap-1.5 rounded-full border border-border bg-chip px-3 py-1 text-xs font-bold text-heading w-fit">
+          <svg className="h-3.5 w-3.5 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" strokeWidth={2} />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 7v5l3 3" />
+          </svg>
+          <span>Standard Fresh Delivery • {DELIVERY_ETA_TEXT}</span>
+        </div>
         {/* Fresh Morning Batch Announcement matching home.png */}
         <Link
           href="/search"

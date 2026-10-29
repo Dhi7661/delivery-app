@@ -304,7 +304,7 @@ function OrderDetailsContent() {
 export default function OrderPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background text-text antialiased pb-28">
-      <Header variant="order-placed" />
+      <Header title="Order Placed" showBack={false} />
       <main className="mx-auto w-full max-w-md flex-1 px-4 py-4">
         <Suspense
           fallback={
