@@ -346,7 +346,10 @@ export default function CheckoutPage() {
   const loading = cartLoading || authLoading;
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-text antialiased pb-32">
+    <div
+      style={{ paddingBottom: 'calc(10rem + env(safe-area-inset-bottom, 0px))' }}
+      className="flex min-h-screen flex-col bg-background text-text antialiased"
+    >
       <Header
         variant="checkout"
         title="Review &amp; Checkout"
@@ -829,8 +832,11 @@ export default function CheckoutPage() {
               </span>
             </div>
 
-            {/* Fixed Sticky Place Order Bar matching checkout.png */}
-            <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 px-4 py-3 backdrop-blur-md">
+            {/* Fixed Sticky Proceed to Pay Bar above BottomNav */}
+            <div
+              style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}
+              className="fixed left-0 right-0 z-40 border-t border-border bg-card/95 px-4 py-3 backdrop-blur-md shadow-sm"
+            >
               <div className="mx-auto flex max-w-md items-center justify-between gap-4">
                 <div className="flex flex-col">
                   <span className="text-[10px] font-extrabold uppercase text-muted">Total Payable</span>
@@ -845,8 +851,9 @@ export default function CheckoutPage() {
                     size="lg"
                     fullWidth
                     disabled={submitting || (paymentMethod === 'COD' && !!isOverCodLimit)}
+                    className="min-h-[44px]"
                   >
-                    {submitting ? 'Placing Order...' : `Place Order ${formatPaise(cart.total_paise)} \u2192`}
+                    {submitting ? 'Placing Order...' : `Proceed to Pay ${formatPaise(cart.total_paise)} \u2192`}
                   </Button>
                 </div>
               </div>
