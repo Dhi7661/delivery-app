@@ -72,7 +72,7 @@ export default function OrderCard({ order }: { order: OrderCardData }) {
       <div className="flex items-center gap-3">
         <div className="h-14 w-14 shrink-0 overflow-hidden rounded-[12px] bg-surface border border-border/40">
           <ImagePlaceholder
-            label={order.items[0]?.product?.name?.slice(0, 8) || 'Kirana'}
+            label={order.items[0]?.product?.name?.slice(0, 8) || 'Order'}
             aspectRatio="1:1"
             className="h-full w-full object-cover"
           />

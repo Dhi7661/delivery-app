@@ -402,7 +402,7 @@ function OrderTrackingContent() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <span className="text-xs font-extrabold text-heading block">Packed with Care</span>
-                        <span className="text-[11px] font-medium text-muted">Quality verified by Ramesh Kirana</span>
+                        <span className="text-[11px] font-medium text-muted">Quality verified and packed</span>
                       </div>
                       <span className="text-xs font-medium text-muted shrink-0">6:49 PM</span>
                     </div>

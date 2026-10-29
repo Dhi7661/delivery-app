@@ -288,17 +288,14 @@ function OrderDetailsContent() {
         </Link>
       </div>
 
-      {/* Trust Footer matching order-placed.png */}
+      {/* Footer */}
       <div className="text-center pt-2 pb-4 space-y-0.5">
         <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-heading">
           <svg className="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
           </svg>
-          <span>Gharachya kiranadukaana sarkha vishwas</span>
+          <span>Direct delivery to your doorstep</span>
         </div>
-        <p className="text-[11px] font-medium text-muted">
-          Mayur Colony, Pune
-        </p>
       </div>
     </div>
   );

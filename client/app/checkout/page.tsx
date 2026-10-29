@@ -815,7 +815,7 @@ export default function CheckoutPage() {
                 </svg>
               </div>
               <span className="leading-snug">
-                Handpicked fresh from your trusted neighbourhood kirana. Zero questions return at your doorstep.
+                Handpicked fresh daily. Zero questions return at your doorstep.
               </span>
             </div>
 

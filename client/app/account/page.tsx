@@ -109,7 +109,7 @@ export default function AccountPage() {
           <div>
             <h1 className="text-xl font-black text-heading">My Account</h1>
             <p className="text-xs font-semibold text-muted">
-              Manage your neighbourhood kirana preferences
+              Manage your account preferences
             </p>
           </div>
           <span className="rounded-[10px] border border-border bg-chip px-2.5 py-1 font-mono text-xs font-bold text-heading">

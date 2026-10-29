@@ -13,7 +13,7 @@ import { useCart } from '@/context/CartContext';
 import { API_BASE_URL, ProductSummary } from '@/lib/api';
 
 const TRENDING_SEARCHES = [
-  'Alphonso Mangoes',
+  'Chakki Atta',
   'Chitale Cow Milk',
   'Fresh Kothimbir',
   'Kolhapuri Jaggery',
@@ -153,7 +153,7 @@ export default function SearchPage() {
         ) : loading ? (
           <div className="flex min-h-[220px] flex-col items-center justify-center text-muted">
             <div className="h-8 w-8 animate-spin rounded-full border-3 border-primary border-t-transparent" />
-            <span className="mt-3 text-sm font-semibold">Searching kirana inventory...</span>
+            <span className="mt-3 text-sm font-semibold">Searching inventory...</span>
           </div>
         ) : hasSearched && products.length === 0 ? (
           <div className="flex min-h-[200px] flex-col items-center justify-center text-center px-4">
@@ -173,7 +173,7 @@ export default function SearchPage() {
           <div>
             <div className="mb-3 flex items-center justify-between text-xs font-bold text-muted">
               <span className="text-heading font-extrabold">Matching Results</span>
-              <span>Saswad &amp; Pune Kirana hub</span>
+              <span>In stock nearby</span>
             </div>
 
             {/* Horizontal Result Cards matching search.png */}
@@ -283,7 +283,7 @@ export default function SearchPage() {
             </div>
           </div>
 
-          {/* Quality Standard Card matching search.png */}
+          {/* Quality Standard Card */}
           <div className="flex items-start gap-3 rounded-[16px] border border-border bg-surface p-3.5 shadow-2xs">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-card border border-border text-primary">
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -291,9 +291,9 @@ export default function SearchPage() {
               </svg>
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-xs font-bold text-heading">Uncut, Sorted Kirana Standard</span>
+              <span className="text-xs font-bold text-heading">Standard Fresh Delivery</span>
               <span className="mt-0.5 text-[11px] font-medium text-muted">
-                Inspected at early 5 AM arrival from Saswad &amp; Junnar mandis.
+                Inspected daily for quality and freshness.
               </span>
             </div>
           </div>
