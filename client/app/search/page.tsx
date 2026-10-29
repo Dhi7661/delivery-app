@@ -222,8 +222,8 @@ export default function SearchPage() {
                       </div>
                     </div>
 
-                    {/* Right: Add Button or Stepper */}
-                    <div className="shrink-0 w-24">
+                    {/* Right: Add Button or Stepper (outline primary 44px) */}
+                    <div className="shrink-0 w-28">
                       {!prod.is_available ? (
                         <span className="inline-block w-full text-center text-xs font-bold text-muted">
                           Unavailable
