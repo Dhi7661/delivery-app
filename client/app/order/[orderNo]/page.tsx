@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/ui/Header';
 import BottomNav from '@/components/ui/BottomNav';
+import CartBar from '@/components/ui/CartBar';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { API_BASE_URL, OrderData } from '@/lib/api';
@@ -317,6 +318,7 @@ export default function OrderPage() {
           <OrderDetailsContent />
         </Suspense>
       </main>
+      <CartBar />
       <BottomNav />
     </div>
   );

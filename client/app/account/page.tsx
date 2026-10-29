@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Header from '@/components/ui/Header';
 import BottomNav from '@/components/ui/BottomNav';
+import CartBar from '@/components/ui/CartBar';
 import Button from '@/components/ui/Button';
 import DevOtpBanner from '@/components/DevOtpBanner';
 import { useAuth } from '@/context/AuthContext';
@@ -463,6 +464,7 @@ export default function AccountPage() {
         )}
       </main>
 
+      <CartBar />
       <BottomNav />
     </div>
   );

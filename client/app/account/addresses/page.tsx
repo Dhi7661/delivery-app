@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/ui/Header';
 import BottomNav from '@/components/ui/BottomNav';
+import CartBar from '@/components/ui/CartBar';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { useAuth } from '@/context/AuthContext';
@@ -172,6 +173,7 @@ export default function SavedAddressesPage() {
           <div className="h-8 w-8 animate-spin rounded-full border-3 border-primary border-t-transparent" />
           <span className="mt-3 text-sm font-semibold">Loading addresses...</span>
         </main>
+        <CartBar />
         <BottomNav />
       </div>
     );
@@ -406,6 +408,7 @@ export default function SavedAddressesPage() {
         )}
       </main>
 
+      <CartBar />
       <BottomNav />
     </div>
   );

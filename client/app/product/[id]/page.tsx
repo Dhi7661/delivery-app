@@ -4,6 +4,7 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Header from '@/components/ui/Header';
 import BottomNav from '@/components/ui/BottomNav';
+import CartBar from '@/components/ui/CartBar';
 import ImagePlaceholder from '@/components/ui/ImagePlaceholder';
 import PriceLabel from '@/components/ui/PriceLabel';
 import Button from '@/components/ui/Button';
@@ -61,7 +62,7 @@ function ProductContent() {
       : 0;
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-text antialiased pb-32">
+    <div className="flex min-h-screen flex-col bg-background text-text antialiased pb-[calc(8.5rem+env(safe-area-inset-bottom,0px))]">
       {/* Top Header */}
       <Header
         title={product?.name || 'Product Details'}
@@ -186,51 +187,11 @@ function ProductContent() {
         )}
       </main>
 
-      {/* Fixed Sticky Bottom Action Bar */}
-      {product && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 px-4 py-3 backdrop-blur-md">
-          <div className="mx-auto flex max-w-md items-center justify-between gap-4">
-            <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-muted">
-                {product.unit_size || product.brand}
-              </span>
-              <PriceLabel
-                sellingPricePaise={product.selling_price_paise}
-                mrpPaise={product.mrp_paise}
-                size="md"
-              />
-            </div>
+      {/* Floating Cart Bar above BottomNav */}
+      <CartBar />
 
-            <div className="w-48">
-              {!product.is_available ? (
-                <Button variant="outline" size="md" fullWidth disabled className="min-h-[44px]">
-                  Out of Stock
-                </Button>
-              ) : cartItem ? (
-                <QuantityStepper
-                  quantity={cartItem.qty}
-                  onIncrease={() => updateQty(product.id, cartItem.qty + 1)}
-                  onDecrease={() => updateQty(product.id, cartItem.qty - 1)}
-                  className="min-h-[44px] w-full justify-between"
-                />
-              ) : (
-                <Button
-                  variant="primary"
-                  size="md"
-                  fullWidth
-                  className="min-h-[44px]"
-                  onClick={() => addItem(product.id, 1)}
-                >
-                  <svg className="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                  </svg>
-                  + Add to Cart
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Bottom Navigation */}
+      <BottomNav />
     </div>
   );
 }
@@ -239,12 +200,13 @@ export default function ProductPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen flex-col bg-background text-text antialiased pb-28">
+        <div className="flex min-h-screen flex-col bg-background text-text antialiased pb-[calc(8.5rem+env(safe-area-inset-bottom,0px))]">
           <Header showBack title="Product Details" />
           <div className="flex min-h-[300px] flex-col items-center justify-center text-muted">
             <div className="h-8 w-8 animate-spin rounded-full border-3 border-primary border-t-transparent" />
             <span className="mt-3 text-sm font-semibold">Loading...</span>
           </div>
+          <CartBar />
           <BottomNav />
         </div>
       }

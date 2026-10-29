@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/ui/Header';
 import BottomNav from '@/components/ui/BottomNav';
+import CartBar from '@/components/ui/CartBar';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import ImagePlaceholder from '@/components/ui/ImagePlaceholder';
@@ -159,6 +160,7 @@ export default function OrdersPage() {
         )}
       </main>
 
+      <CartBar />
       <BottomNav />
     </div>
   );

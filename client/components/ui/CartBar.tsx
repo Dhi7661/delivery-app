@@ -1,12 +1,19 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { formatPaise } from '@/lib/money';
 
-export default function CartBar() {
+function CartBarInner() {
   const { cart } = useCart();
+  const pathname = usePathname();
+
+  // Hide on /cart and /checkout so it does not collide with their dedicated bottom bars
+  if (pathname === '/cart' || pathname === '/checkout') {
+    return null;
+  }
 
   if (!cart || cart.item_count === 0) {
     return null;
@@ -15,7 +22,8 @@ export default function CartBar() {
   return (
     <aside
       aria-label="Current cart summary"
-      className="fixed bottom-16 left-0 right-0 z-40 px-4 pb-2"
+      style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}
+      className="fixed left-0 right-0 z-40 px-4 pb-2"
     >
       <div className="mx-auto flex max-w-md items-center justify-between rounded-[16px] bg-saffron p-3 text-on-saffron shadow-lg transition-all animate-slide-up border border-border/40">
         <div className="flex items-center gap-3 min-w-0">
@@ -55,5 +63,13 @@ export default function CartBar() {
         </Link>
       </div>
     </aside>
+  );
+}
+
+export default function CartBar() {
+  return (
+    <Suspense fallback={null}>
+      <CartBarInner />
+    </Suspense>
   );
 }
