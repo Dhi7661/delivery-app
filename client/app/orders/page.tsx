@@ -8,6 +8,7 @@ import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import ImagePlaceholder from '@/components/ui/ImagePlaceholder';
 import SegmentedTabs from '@/components/ui/SegmentedTabs';
+import OrderCard from '@/components/ui/OrderCard';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL, OrderData } from '@/lib/api';
 import { formatPaise } from '@/lib/money';
@@ -153,87 +154,9 @@ export default function OrdersPage() {
                   No {selectedTab} orders found.
                 </div>
               ) : (
-                displayedOrders.map((order) => {
-                  const statusInfo = getOrderStatusDisplay(order.status);
-                  const isLive = !PAST_STATUSES.includes(order.status);
-                  const itemsSummary = order.items
-                    .map((i) => i.product?.name || 'Item')
-                    .slice(0, 3)
-                    .join(', ');
-
-                  return (
-                    <div
-                      key={order.id}
-                      className="rounded-[18px] border border-border bg-card p-4 shadow-2xs space-y-3"
-                    >
-                      {/* Top Header of Card */}
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-xs font-bold text-heading">
-                              Order #{order.order_no}
-                            </span>
-                            {isLive && (
-                              <span className="flex h-2 w-2 rounded-full bg-saffron" />
-                            )}
-                          </div>
-                          <span className="text-[11px] font-medium text-muted">
-                            {new Date(order.created_at).toLocaleDateString('en-IN', {
-                              day: 'numeric',
-                              month: 'short',
-                              hour: 'numeric',
-                              minute: '2-digit',
-                            })}
-                          </span>
-                        </div>
-                        <Badge variant={statusInfo.variant}>
-                          {statusInfo.label}
-                        </Badge>
-                      </div>
-
-                      {/* Items Preview matching orders.png */}
-                      <div className="flex items-center gap-3">
-                        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-[12px] bg-surface border border-border/40">
-                          <ImagePlaceholder
-                            label={order.items[0]?.product?.name?.slice(0, 8) || 'Kirana'}
-                            aspectRatio="1:1"
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-heading leading-tight truncate">
-                            {itemsSummary}
-                          </p>
-                          <p className="text-[11px] font-medium text-muted mt-0.5 truncate">
-                            {order.items.length} {order.items.length === 1 ? 'item' : 'items'} &bull; Direct Kirana Dispatch
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Total & Action Button matching orders.png */}
-                      <div className="border-t border-border/40 pt-2.5 flex items-center justify-between">
-                        <div>
-                          <span className="text-[10px] font-bold uppercase text-muted block">
-                            Total Bill
-                          </span>
-                          <span className="text-sm font-black text-heading">
-                            {formatPaise(order.total_paise)}
-                          </span>
-                        </div>
-
-                        <Link href={`/orders/${order.order_no}`}>
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            className="min-h-[44px] px-4 font-bold"
-                          >
-                            Track Order &rarr;
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-                  );
-                })
+                displayedOrders.map((order) => (
+                  <OrderCard key={order.id} order={order} />
+                ))
               )}
             </div>
           </div>
