@@ -2,22 +2,27 @@ import React from 'react';
 
 export interface ImagePlaceholderProps {
   alt?: string;
-  aspectRatio?: 'square' | 'video' | 'portrait';
+  label?: string;
+  aspectRatio?: 'square' | 'video' | 'portrait' | '1:1' | '4:3' | '16:9';
   icon?: string;
   className?: string;
 }
 
 export default function ImagePlaceholder({
   alt = 'Image placeholder',
+  label,
   aspectRatio = 'square',
   icon,
   className = '',
 }: ImagePlaceholderProps) {
   const aspectClass = {
     square: 'aspect-square',
+    '1:1': 'aspect-square',
     video: 'aspect-video',
+    '16:9': 'aspect-video',
     portrait: 'aspect-4/5',
-  }[aspectRatio];
+    '4:3': 'aspect-4/3',
+  }[aspectRatio] || 'aspect-square';
 
   return (
     <div

@@ -2,16 +2,24 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Header from '@/components/Header';
-import BottomNav from '@/components/BottomNav';
+import Header from '@/components/ui/Header';
+import BottomNav from '@/components/ui/BottomNav';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
+import ImagePlaceholder from '@/components/ui/ImagePlaceholder';
+import SegmentedTabs from '@/components/ui/SegmentedTabs';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL, OrderData } from '@/lib/api';
 import { formatPaise } from '@/lib/money';
+import { getOrderStatusDisplay } from '@/lib/orderStatus';
+
+const PAST_STATUSES = ['DELIVERED', 'CANCELLED', 'RETURNED', 'PAYMENT_FAILED'];
 
 export default function OrdersPage() {
   const { user, loading: authLoading } = useAuth();
   const [orders, setOrders] = useState<OrderData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTab, setSelectedTab] = useState<'all' | 'active' | 'past'>('all');
 
   useEffect(() => {
     if (!user) {
@@ -39,117 +47,194 @@ export default function OrdersPage() {
     fetchUserOrders();
   }, [user]);
 
-  return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 antialiased pb-24">
-      <Header showBack title="My Orders" />
+  const activeOrders = orders.filter((o) => !PAST_STATUSES.includes(o.status));
+  const pastOrders = orders.filter((o) => PAST_STATUSES.includes(o.status));
 
-      <main className="mx-auto w-full max-w-md flex-1 px-3 py-4">
+  const displayedOrders =
+    selectedTab === 'active'
+      ? activeOrders
+      : selectedTab === 'past'
+      ? pastOrders
+      : orders;
+
+  const tabs = [
+    { id: 'all', label: `All Orders (${orders.length})` },
+    { id: 'active', label: `Active (${activeOrders.length})` },
+    { id: 'past', label: 'Past Orders' },
+  ];
+
+  return (
+    <div className="flex min-h-screen flex-col bg-background text-text antialiased pb-28">
+      {/* Top Header matching orders.png with 2-row layout */}
+      <Header variant="orders" />
+
+      <main className="mx-auto w-full max-w-md flex-1 px-4 py-4 space-y-4">
+        {/* Title row matching orders.png */}
+        <div className="flex items-baseline justify-between">
+          <h1 className="text-xl font-black text-heading">My Orders</h1>
+          <span className="text-xs font-semibold text-muted">Showing all deliveries</span>
+        </div>
+
         {authLoading || loading ? (
-          <div className="flex min-h-[300px] flex-col items-center justify-center text-slate-400">
-            <div className="h-8 w-8 animate-spin rounded-full border-3 border-emerald-600 border-t-transparent" />
-            <span className="mt-3 text-sm font-medium">Loading your orders...</span>
+          <div className="flex min-h-[300px] flex-col items-center justify-center text-muted">
+            <div className="h-8 w-8 animate-spin rounded-full border-3 border-primary border-t-transparent" />
+            <span className="mt-3 text-sm font-semibold">Loading orders...</span>
           </div>
         ) : !user ? (
           /* Unauthenticated Prompt */
           <div className="flex min-h-[360px] flex-col items-center justify-center text-center px-4">
-            <span className="text-5xl">📦</span>
-            <h1 className="mt-3 text-lg font-bold text-slate-800">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-chip text-primary">
+              <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <h2 className="mt-4 text-lg font-black text-heading">
               Sign In to View Orders
-            </h1>
-            <p className="mt-1 text-sm text-slate-500 max-w-xs">
+            </h2>
+            <p className="mt-1 text-xs font-medium text-muted max-w-xs leading-relaxed">
               Log in with your mobile number to view past orders and track current deliveries.
             </p>
-            <Link
-              href="/account"
-              className="mt-5 flex min-h-[48px] w-full max-w-xs items-center justify-center rounded-xl bg-emerald-600 font-bold text-sm text-white shadow-md hover:bg-emerald-700 active:scale-98 transition-transform"
-            >
-              Sign In with Phone
-            </Link>
+            <div className="mt-6 w-full max-w-xs">
+              <Link href="/account">
+                <Button variant="primary" size="lg" fullWidth>
+                  Sign In with Phone
+                </Button>
+              </Link>
+            </div>
           </div>
         ) : orders.length === 0 ? (
           /* Empty Orders */
           <div className="flex min-h-[360px] flex-col items-center justify-center text-center px-4">
-            <span className="text-5xl">🛍️</span>
-            <h1 className="mt-3 text-lg font-bold text-slate-800">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-chip text-primary">
+              <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+            </div>
+            <h2 className="mt-4 text-lg font-black text-heading">
               No orders yet
-            </h1>
-            <p className="mt-1 text-sm text-slate-500 max-w-xs">
+            </h2>
+            <p className="mt-1 text-xs font-medium text-muted max-w-xs leading-relaxed">
               You haven&apos;t placed any orders yet. Explore your local partner shops!
             </p>
-            <Link
-              href="/"
-              className="mt-5 flex min-h-[48px] w-full max-w-xs items-center justify-center rounded-xl bg-emerald-600 font-bold text-sm text-white shadow-md hover:bg-emerald-700 active:scale-98"
-            >
-              Start Shopping
-            </Link>
+            <div className="mt-6 w-full max-w-xs">
+              <Link href="/">
+                <Button variant="primary" size="lg" fullWidth>
+                  Start Shopping
+                </Button>
+              </Link>
+            </div>
           </div>
         ) : (
-          /* Orders List */
-          <div className="flex flex-col gap-3">
-            <h1 className="text-xs font-bold uppercase tracking-wider text-slate-400 px-1">
-              Recent Orders ({orders.length})
-            </h1>
+          <div className="space-y-4">
+            {/* Filter Tabs matching orders.png */}
+            <SegmentedTabs
+              tabs={tabs}
+              activeId={selectedTab}
+              onChange={(id) => setSelectedTab(id as 'all' | 'active' | 'past')}
+            />
 
-            {orders.map((order) => (
-              <div
-                key={order.id}
-                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs flex flex-col gap-2.5"
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs font-bold text-slate-800">
-                    {order.order_no}
+            {/* If All is selected, show Active Delivery section then Past Orders section */}
+            {selectedTab === 'all' && activeOrders.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-extrabold tracking-wider uppercase text-muted">
+                  <span>Active Delivery</span>
+                  <span className="flex items-center gap-1 text-saffron text-[11px] font-bold lowercase">
+                    <span className="h-2 w-2 rounded-full bg-saffron" />
+                    live
                   </span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      order.status === 'CONFIRMED'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : order.status === 'DELIVERED'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-slate-100 text-slate-700'
-                    }`}
-                  >
-                    {order.status}
-                  </span>
-                </div>
-
-                {/* Items preview */}
-                <div className="text-xs text-slate-600 space-y-1">
-                  {order.items.slice(0, 2).map((item) => (
-                    <div key={item.id} className="flex justify-between truncate">
-                      <span className="truncate pr-2">
-                        {item.product?.name || 'Item'} × {item.qty}
-                      </span>
-                      <span className="font-semibold text-slate-800 shrink-0">
-                        {formatPaise(item.line_total_paise)}
-                      </span>
-                    </div>
-                  ))}
-                  {order.items.length > 2 && (
-                    <span className="text-[11px] text-slate-400 block">
-                      +{order.items.length - 2} more items
-                    </span>
-                  )}
-                </div>
-
-                {/* Total & Link */}
-                <div className="border-t border-slate-100 pt-2.5 flex items-center justify-between">
-                  <div>
-                    <span className="text-[11px] text-slate-400 block">Total</span>
-                    <span className="text-sm font-extrabold text-emerald-700">
-                      {formatPaise(order.total_paise)}
-                    </span>
-                  </div>
-
-                  <Link
-                    href={`/orders/${order.order_no}`}
-                    className="flex min-h-[36px] items-center rounded-lg bg-emerald-50 px-3 text-xs font-bold text-emerald-800 hover:bg-emerald-100 active:scale-95"
-                  >
-                    Track Order &rarr;
-                  </Link>
                 </div>
               </div>
-            ))}
+            )}
+
+            {/* Orders List */}
+            <div className="space-y-3">
+              {displayedOrders.length === 0 ? (
+                <div className="rounded-[16px] border border-border bg-card p-6 text-center text-xs text-muted">
+                  No {selectedTab} orders found.
+                </div>
+              ) : (
+                displayedOrders.map((order) => {
+                  const statusInfo = getOrderStatusDisplay(order.status);
+                  const isLive = !PAST_STATUSES.includes(order.status);
+                  const itemsSummary = order.items
+                    .map((i) => i.product?.name || 'Item')
+                    .slice(0, 3)
+                    .join(', ');
+
+                  return (
+                    <div
+                      key={order.id}
+                      className="rounded-[18px] border border-border bg-card p-4 shadow-2xs space-y-3"
+                    >
+                      {/* Top Header of Card */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-xs font-bold text-heading">
+                              Order #{order.order_no}
+                            </span>
+                            {isLive && (
+                              <span className="flex h-2 w-2 rounded-full bg-saffron" />
+                            )}
+                          </div>
+                          <span className="text-[11px] font-medium text-muted">
+                            {new Date(order.created_at).toLocaleDateString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
+                        <Badge variant={statusInfo.variant}>
+                          {statusInfo.label}
+                        </Badge>
+                      </div>
+
+                      {/* Items Preview matching orders.png */}
+                      <div className="flex items-center gap-3">
+                        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-[12px] bg-surface border border-border/40">
+                          <ImagePlaceholder
+                            label={order.items[0]?.product?.name?.slice(0, 8) || 'Kirana'}
+                            aspectRatio="1:1"
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-heading leading-tight truncate">
+                            {itemsSummary}
+                          </p>
+                          <p className="text-[11px] font-medium text-muted mt-0.5 truncate">
+                            {order.items.length} {order.items.length === 1 ? 'item' : 'items'} &bull; Direct Kirana Dispatch
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Total & Action Button matching orders.png */}
+                      <div className="border-t border-border/40 pt-2.5 flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase text-muted block">
+                            Total Bill
+                          </span>
+                          <span className="text-sm font-black text-heading">
+                            {formatPaise(order.total_paise)}
+                          </span>
+                        </div>
+
+                        <Link href={`/orders/${order.order_no}`}>
+                          <Button
+                            variant={isLive ? 'primary' : 'outline'}
+                            size="sm"
+                          >
+                            Track Order &rarr;
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         )}
       </main>

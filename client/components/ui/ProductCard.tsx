@@ -46,43 +46,40 @@ export default function ProductCard({ product, className = '' }: ProductCardProp
           {/* Out of Stock overlay or Discount tag */}
           {!product.is_available ? (
             <div className="absolute inset-0 flex items-center justify-center rounded-[12px] bg-card/85 backdrop-blur-2xs">
-              <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-background shadow-xs">
+              <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-card shadow-xs">
                 Out of stock
               </span>
             </div>
           ) : hasDiscount ? (
-            <span className="absolute left-2 top-2 rounded-full bg-saffron px-2 py-0.5 text-[10px] font-extrabold text-on-saffron shadow-xs">
+            <span className="absolute left-2 top-2 rounded-[6px] bg-saffron px-2 py-0.5 text-[10px] font-extrabold text-on-saffron shadow-xs uppercase tracking-wide">
               {discountPercent}% OFF
             </span>
           ) : null}
         </div>
 
-        {/* Brand & Unit Size */}
-        <div className="mt-2.5 flex items-center justify-between text-[11px] text-muted min-w-0">
-          <span className="truncate font-semibold min-w-0">{product.brand}</span>
-          <span className="shrink-0 rounded-[6px] bg-chip px-1.5 py-0.5 font-bold text-heading ml-1">
-            {product.unit_size}
-          </span>
+        {/* Unit Size */}
+        <div className="mt-2 text-xs font-semibold text-muted min-w-0 truncate">
+          {product.unit_size || product.brand}
         </div>
 
         {/* Product Title */}
-        <h3 className="mt-1 line-clamp-2 text-xs font-bold leading-snug text-heading group-hover:text-primary min-w-0">
+        <h3 className="mt-1 line-clamp-2 text-sm font-bold leading-snug text-heading group-hover:text-primary min-w-0 min-h-[38px]">
           {product.name}
         </h3>
       </Link>
 
       {/* Pricing and Action row */}
-      <div className="mt-3 pt-2.5 border-t border-border/50">
+      <div className="mt-2.5 pt-2 border-t border-border/40">
         <PriceLabel
           sellingPricePaise={product.selling_price_paise}
           mrpPaise={product.mrp_paise}
           size="md"
         />
 
-        {/* Action: QuantityStepper if in cart, Add button if not, 44px min-height */}
+        {/* Action button: outline button '+ Add' or QuantityStepper if in cart */}
         <div className="mt-2.5">
           {!product.is_available ? (
-            <Button variant="secondary" size="sm" fullWidth disabled>
+            <Button variant="outline" size="sm" fullWidth disabled>
               Unavailable
             </Button>
           ) : cartItem ? (
@@ -93,12 +90,12 @@ export default function ProductCard({ product, className = '' }: ProductCardProp
             />
           ) : (
             <Button
-              variant="saffron"
+              variant="outline"
               size="sm"
               fullWidth
               onClick={() => addItem(product.id, 1)}
             >
-              Add
+              + Add
             </Button>
           )}
         </div>
