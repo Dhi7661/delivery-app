@@ -128,10 +128,10 @@ export default function AccountPage() {
             {/* 1. User Profile Card matching account.png */}
             <div className="rounded-[20px] border border-border bg-card p-4 shadow-2xs space-y-3">
               <div className="flex items-center gap-3.5">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-black text-card shadow-xs">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-xl font-black text-card shadow-xs">
                   {user.name
-                    ? user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
-                    : 'AD'}
+                    ? user.name.trim()[0].toUpperCase()
+                    : 'A'}
                 </div>
                 <div className="min-w-0 flex-1">
                   <h2 className="text-base font-extrabold text-heading truncate">
@@ -144,11 +144,11 @@ export default function AccountPage() {
               </div>
 
               {/* Verified Customer Badge */}
-              <div className="rounded-[12px] border border-border bg-surface p-2.5 flex items-center gap-2 text-xs font-semibold text-heading">
+              <div className="rounded-[12px] border border-border bg-chip p-2.5 flex items-center gap-2 text-xs font-semibold text-primary">
                 <svg className="h-4 w-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                 </svg>
-                <span>Valued Customer &bull; 24 Orders &bull; Since Nov 2022</span>
+                <span>Verified Customer &bull; 24 Orders &bull; Since Nov 2022</span>
               </div>
             </div>
 
@@ -208,6 +208,9 @@ export default function AccountPage() {
                     </p>
                     <p className="mt-0.5 text-[11px] text-muted">
                       Drop Note: Leave with security gate if ring unanswered
+                    </p>
+                    <p className="mt-1 text-[11px] font-semibold text-primary">
+                      Serviceable area: standard fresh delivery in {DELIVERY_ETA_TEXT}
                     </p>
                   </div>
                 </div>
@@ -293,18 +296,20 @@ export default function AccountPage() {
               </div>
             </div>
 
-            {/* 5. Logout Button */}
+            {/* 5. Logout Button: outline primary 44px */}
             <div className="pt-2">
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="md"
+                fullWidth
                 onClick={logout}
-                className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-[14px] border border-border bg-card text-sm font-bold text-heading hover:bg-surface active:bg-chip shadow-2xs transition-colors cursor-pointer"
+                className="min-h-[44px]"
               >
-                <svg className="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-4 w-4 text-primary mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
-                <span>Log out</span>
-              </button>
+                Log out
+              </Button>
             </div>
 
             {/* 6. Trust Footer */}
