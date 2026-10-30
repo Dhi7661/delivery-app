@@ -14,6 +14,7 @@ import {
 import { dispatchOrderStatusNotifications, retryNotification } from '../lib/notifications.js';
 import { generateOrderInvoice, generateCreditNote } from '../lib/invoice.js';
 import { cancelOrderWithRefund, processOrderReturn } from '../lib/cancellation.js';
+import { catalogCache } from '../lib/catalogCache.js';
 
 export const adminRouter = Router();
 

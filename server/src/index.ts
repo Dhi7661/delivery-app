@@ -14,7 +14,9 @@ import { addressRouter } from './routes/address.js';
 import { deliveryRouter } from './routes/delivery.js';
 import { invoiceRouter } from './routes/invoice.js';
 import { paymentRouter } from './routes/payment.js';
+import { monitoringRouter, isSimulatedOutage } from './routes/monitoring.js';
 import { reconcilePendingPayments } from './lib/reconciliation.js';
+import { errorTracker } from './lib/errorTracker.js';
 import {
   authRateLimiter,
   checkoutRateLimiter,
@@ -96,9 +98,20 @@ app.use('/api', addressRouter);
 app.use('/api', deliveryRouter);
 app.use('/api', invoiceRouter);
 app.use('/api/payments', paymentRouter);
+app.use('/api', monitoringRouter);
 
-// API v1 Health Check with DB connectivity test
+// API v1 Health Check with DB connectivity test and simulated downtime support (F20)
 app.get('/api/v1/health', async (_req: Request, res: Response) => {
+  if (isSimulatedOutage()) {
+    return res.status(503).json({
+      status: 'down',
+      service: `${BRAND_NAME} Delivery Backend`,
+      simulatedOutage: true,
+      message: 'Simulated system outage for uptime alert validation.',
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   try {
     await prisma.$queryRaw`SELECT 1`;
     res.status(200).json({
@@ -120,14 +133,23 @@ app.get('/api/v1/health', async (_req: Request, res: Response) => {
   }
 });
 
-// Central Error Handler
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+// Central Error Handler with Sentry/ErrorTracker integration (F20)
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   if (err.message && err.message.includes('CORS')) {
     return res.status(403).json({ error: err.message });
   }
+
+  // F20: Capture unhandled server exceptions
+  const eventId = errorTracker.captureException(err, {
+    url: req.originalUrl,
+    method: req.method,
+    ip: req.ip,
+  });
+
   console.error('Unhandled Server Error:', err);
   res.status(500).json({
     error: 'Internal Server Error',
+    eventId,
     message: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : err.message,
   });
 });

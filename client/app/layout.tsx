@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { Nunito_Sans } from "next/font/google";
 import { BRAND_NAME, BRAND_DESCRIPTION } from "@/lib/brand";
 import "./globals.css";
+import { CartProvider } from "@/context/CartContext";
+import { AuthProvider } from "@/context/AuthContext";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const nunitoSans = Nunito_Sans({
   variable: "--font-nunito-sans",
@@ -21,9 +24,6 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
 };
 
-import { CartProvider } from "@/context/CartContext";
-import { AuthProvider } from "@/context/AuthContext";
-
 export default function RootLayout({
   children,
 }: {
@@ -35,9 +35,11 @@ export default function RootLayout({
       className={`${nunitoSans.variable} h-full antialiased font-sans`}
     >
       <body className="min-h-full flex flex-col bg-background text-text">
-        <AuthProvider>
-          <CartProvider>{children}</CartProvider>
-        </AuthProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            <CartProvider>{children}</CartProvider>
+          </AuthProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

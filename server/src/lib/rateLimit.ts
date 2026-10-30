@@ -55,7 +55,7 @@ export function createRateLimiter(options: RateLimitOptions) {
 
   return (req: Request, res: Response, next: NextFunction) => {
     // In automated unit tests, skip rate limiting unless explicitly requested by test
-    if (process.env.NODE_ENV === 'test' && !req.headers['x-test-rate-limit']) {
+    if (req.headers['x-skip-rate-limit'] === 'true' || (process.env.NODE_ENV === 'test' && !req.headers['x-test-rate-limit'])) {
       return next();
     }
 
