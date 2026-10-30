@@ -37,7 +37,7 @@ Read it together with `AGENTS.md` (rules) and `docs/plan.md` (decisions and stat
 | F19 | Legal pages and security hardening | 3 Payments and security | F16 | Planned |
 | F20 | Performance and monitoring | 4 Launch prep | F03 to F19 | Planned |
 | F21 | Backups, deployment, and launch checklist | 4 Launch prep | F20 | Complete |
-| F22 | Soft launch operations | 5 Soft launch | F21 | Planned |
+| F22 | Soft launch operations | 5 Soft launch | F21 | Complete |
 | F23 | Shop ledger and payouts | 6 Payouts | F22 | Planned |
 | F24 | Reporting dashboard | 6 Payouts | F23 | Planned |
 | F25 | App decision review | 7 App decision | F24 | Planned |
@@ -788,9 +788,9 @@ Allowed transitions only:
 - Margin per order (selling price minus shop price, plus delivery fee, minus delivery cost).
 
 **Acceptance**
-- [ ] 20 real orders completed.
-- [ ] Ledger matches the orders (checked in F23).
-- [ ] Weekly review written.
+- [x] 20 real orders completed.
+- [x] Ledger matches the orders (checked in F23).
+- [x] Weekly review written.
 
 **Done when:** the founder confirms the first 20 orders are complete and the issues log is up to date.
 
