@@ -1,55 +1,84 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Header from '@/components/Header';
-import BottomNav from '@/components/BottomNav';
-import { BRAND_TAGLINE } from '@/lib/brand';
-import { API_BASE_URL, Category } from '@/lib/api';
-
-const CATEGORY_ICONS: Record<string, string> = {
-  Groceries: '🌾',
-  Dairy: '🥛',
-  Snacks: '🍪',
-  Beverages: '🥤',
-  'Personal Care': '🧼',
-};
+import Header from '@/components/ui/Header';
+import BottomNav from '@/components/ui/BottomNav';
+import CartBar from '@/components/ui/CartBar';
+import CategoryTile from '@/components/ui/CategoryTile';
+import ProductCard from '@/components/ui/ProductCard';
+import SectionHeading from '@/components/ui/SectionHeading';
+import { API_BASE_URL, Category, ProductSummary } from '@/lib/api';
+import { DELIVERY_ETA_TEXT } from '@/lib/brand';
 
 export default function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [products, setProducts] = useState<ProductSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadCategories() {
+    async function loadData() {
       try {
-        const res = await fetch(`${API_BASE_URL}/categories`);
-        if (res.ok) {
-          const data = await res.json();
-          setCategories(data.categories || []);
+        setLoading(true);
+        // 1. Fetch categories
+        const catRes = await fetch(`${API_BASE_URL}/categories`);
+        if (catRes.ok) {
+          const catData = await catRes.json();
+          const fetchedCategories: Category[] = catData.categories || [];
+          setCategories(fetchedCategories);
+
+          // 2. Fetch popular products from first category or multiple categories
+          if (fetchedCategories.length > 0) {
+            const prodRes = await fetch(
+              `${API_BASE_URL}/categories/${fetchedCategories[0].id}/products?limit=6`
+            );
+            if (prodRes.ok) {
+              const prodData = await prodRes.json();
+              setProducts(prodData.products || []);
+            }
+          }
         }
       } catch (err) {
-        console.error('Failed to fetch categories:', err);
+        console.error('Failed to fetch home data:', err);
       } finally {
         setLoading(false);
       }
     }
 
-    loadCategories();
+    loadData();
   }, []);
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 antialiased pb-20">
+    <div className="flex min-h-screen flex-col bg-background text-text antialiased pb-24">
+      {/* Header with store icon, location chip, and 20-25 mins delivery ETA chip */}
       <Header />
 
-      {/* Search Input Bar (leads to /search) */}
-      <div className="w-full bg-white px-3 pb-3 border-b border-slate-100">
+      {/* Search Input Bar with mic icon matching home.png */}
+      <div className="w-full bg-background px-4 pt-3 pb-1">
         <div className="mx-auto max-w-md">
           <Link
             href="/search"
-            className="flex min-h-[44px] w-full items-center rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-sm text-slate-400 shadow-2xs hover:border-emerald-300"
+            className="flex h-[48px] w-full items-center justify-between rounded-[14px] border border-border bg-card px-3.5 text-sm text-muted shadow-2xs hover:border-primary/40 transition-colors"
           >
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <svg
+                className="h-4 w-4 text-muted shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <span className="truncate">Search vegetables, atta, milk, spices...</span>
+            </div>
+
             <svg
-              className="mr-2.5 h-4 w-4 text-slate-400 shrink-0"
+              className="h-4 w-4 text-muted shrink-0 ml-2"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -58,72 +87,122 @@ export default function Home() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
               />
             </svg>
-            <span>Search groceries, milk, snacks...</span>
           </Link>
         </div>
       </div>
 
       {/* Main Content */}
-      <main className="mx-auto w-full max-w-md flex-1 px-4 py-4">
-        {/* Hero Banner */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 p-5 text-white shadow-sm">
-          <span className="inline-block rounded-md bg-emerald-500/30 px-2 py-0.5 text-xs font-semibold text-emerald-100">
-            Local Partners
-          </span>
-          <h1 className="mt-2 text-lg font-bold leading-tight">
-            {BRAND_TAGLINE}
-          </h1>
-          <p className="mt-1 text-xs text-emerald-100">
-            Real prices directly from local neighbourhood shops. Customer price is never above printed MRP.
-          </p>
+      <main className="mx-auto w-full max-w-md flex-1 px-4 py-3 space-y-4">
+        {/* Delivery ETA Chip */}
+        <div className="flex items-center gap-1.5 rounded-full border border-border bg-chip px-3 py-1 text-xs font-bold text-heading w-fit">
+          <svg className="h-3.5 w-3.5 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" strokeWidth={2} />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 7v5l3 3" />
+          </svg>
+          <span>Standard Fresh Delivery • {DELIVERY_ETA_TEXT}</span>
         </div>
-
-        {/* Categories Grid */}
-        <section className="mt-6" aria-labelledby="categories-heading">
-          <div className="flex items-center justify-between">
-            <h2
-              id="categories-heading"
-              className="text-base font-bold text-slate-900"
-            >
-              Browse Categories
-            </h2>
-            <span className="text-xs font-medium text-emerald-700">
-              {categories.length} categories
-            </span>
+        {/* Fresh Morning Batch Announcement matching home.png */}
+        <Link
+          href="/search"
+          className="flex items-center justify-between rounded-[16px] border border-border bg-card p-3 shadow-2xs hover:bg-surface transition-colors"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-chip text-primary">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                />
+              </svg>
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-sm font-bold text-heading">Fresh Morning Batch</h2>
+              <p className="text-xs text-muted truncate">
+                Sourced directly from Saswad &amp; Junnar farms today
+              </p>
+            </div>
           </div>
+          <svg
+            className="h-5 w-5 text-muted shrink-0 ml-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2.5}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </Link>
+        {/* Categories Section: 3 columns, 12px gap, ImagePlaceholder, No emoji */}
+        <section aria-labelledby="categories-heading">
+          <SectionHeading
+            title="Categories"
+            actionLabel="View All"
+            actionHref="/search"
+            className="mb-3"
+          />
 
-          {loading ? (
-            <div className="mt-4 flex min-h-[140px] items-center justify-center text-slate-400">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
+          {loading && categories.length === 0 ? (
+            <div className="grid grid-cols-3 gap-3">
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <div
+                  key={n}
+                  className="h-28 rounded-[16px] border border-border/50 bg-card/60 animate-pulse"
+                />
+              ))}
             </div>
           ) : (
-            <div className="mt-3 grid grid-cols-2 gap-2.5 min-w-0">
+            <div className="grid grid-cols-3 gap-3 min-w-0">
               {categories.map((cat) => (
-                <Link
-                  key={cat.id}
-                  href={`/category/${cat.id}`}
-                  className="group flex min-h-[64px] min-w-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-2xs transition-all hover:border-emerald-400 hover:shadow-xs active:scale-98"
-                >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-xl transition-transform group-hover:scale-110">
-                    {CATEGORY_ICONS[cat.name] || '🛒'}
-                  </span>
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <span className="text-xs font-bold text-slate-800 group-hover:text-emerald-700 truncate">
-                      {cat.name}
-                    </span>
-                    <span className="text-[10px] font-medium text-slate-400 truncate">
-                      Explore &rarr;
-                    </span>
-                  </div>
-                </Link>
+                <CategoryTile key={cat.id} id={cat.id} name={cat.name} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Popular Products Section: 2 columns, 12px gap, ProductCard with ImagePlaceholder & Add button */}
+        <section aria-labelledby="popular-heading">
+          <div className="mb-3">
+            <h2
+              id="popular-heading"
+              className="text-base font-black tracking-tight text-heading sm:text-lg"
+            >
+              Popular Products
+            </h2>
+            <p className="mt-0.5 text-xs font-semibold text-muted">
+              Top pantry staples ordered daily
+            </p>
+          </div>
+
+          {loading && products.length === 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              {[1, 2, 3, 4].map((n) => (
+                <div
+                  key={n}
+                  className="h-64 rounded-[16px] border border-border/50 bg-card/60 animate-pulse"
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 min-w-0">
+              {products.map((product) => (
+                <ProductCard key={product.id} product={product} />
               ))}
             </div>
           )}
         </section>
       </main>
+
+      {/* Sticky Cart Summary Bar above Bottom Navigation */}
+      <CartBar />
 
       {/* Bottom Navigation */}
       <BottomNav />

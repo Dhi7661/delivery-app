@@ -32,3 +32,7 @@ server/public/invoices/*.pdf
 Thumbs.db
 .vscode/
 .idea/
+
+# Verification screenshots
+/*_390.png
+/headers_10_comparison.png

@@ -3,10 +3,15 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import Header from '@/components/Header';
-import BottomNav from '@/components/BottomNav';
+import Header from '@/components/ui/Header';
+import BottomNav from '@/components/ui/BottomNav';
+import CartBar from '@/components/ui/CartBar';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
 import { API_BASE_URL, OrderData } from '@/lib/api';
 import { formatPaise } from '@/lib/money';
+import { getOrderStatusDisplay } from '@/lib/orderStatus';
+import { DELIVERY_ETA_TEXT } from '@/lib/brand';
 
 function OrderDetailsContent() {
   const params = useParams();
@@ -59,9 +64,9 @@ function OrderDetailsContent() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center text-slate-400">
-        <div className="h-9 w-9 animate-spin rounded-full border-3 border-emerald-600 border-t-transparent" />
-        <span className="mt-3 text-sm font-medium">Fetching order status...</span>
+      <div className="flex min-h-[400px] flex-col items-center justify-center text-muted">
+        <div className="h-9 w-9 animate-spin rounded-full border-3 border-primary border-t-transparent" />
+        <span className="mt-3 text-sm font-semibold">Fetching order status...</span>
       </div>
     );
   }
@@ -70,304 +75,198 @@ function OrderDetailsContent() {
     const isAccessDenied = error?.includes('Access Denied');
     return (
       <div className="flex min-h-[400px] flex-col items-center justify-center text-center px-4">
-        <span className="text-5xl">{isAccessDenied ? '🔒' : '🔍'}</span>
-        <h1 className="mt-3 text-lg font-bold text-slate-800">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-chip text-primary">
+          <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h1 className="mt-4 text-lg font-black text-heading">
           {isAccessDenied ? 'Access Denied' : 'Order Not Found'}
         </h1>
-        <p className="mt-1 text-sm text-slate-500 max-w-xs">
+        <p className="mt-1 text-xs font-medium text-muted max-w-xs">
           {error || 'We could not locate this order.'}
         </p>
-        <div className="mt-5 flex gap-2">
-          {isAccessDenied ? (
-            <Link
-              href="/orders"
-              className="flex min-h-[48px] items-center justify-center rounded-xl bg-emerald-600 px-6 font-bold text-sm text-white shadow-md hover:bg-emerald-700 active:scale-98"
-            >
-              View My Orders
-            </Link>
-          ) : (
-            <Link
-              href="/"
-              className="flex min-h-[48px] items-center justify-center rounded-xl bg-emerald-600 px-6 font-bold text-sm text-white shadow-md hover:bg-emerald-700 active:scale-98"
-            >
-              Return Home
-            </Link>
-          )}
+        <div className="mt-6 w-full max-w-xs">
+          <Link href={isAccessDenied ? '/orders' : '/'}>
+            <Button variant="primary" size="lg" fullWidth>
+              {isAccessDenied ? 'View My Orders' : 'Return Home'}
+            </Button>
+          </Link>
         </div>
       </div>
     );
   }
 
+  const statusDisplay = getOrderStatusDisplay(order.status);
+
   return (
-    <div className="flex flex-col gap-3">
-      {/* Dynamic Status Banner */}
-      {order.status === 'PAYMENT_PENDING' ? (
-        <div className="rounded-2xl border border-amber-300 bg-linear-to-b from-amber-50 to-white p-5 text-center shadow-xs">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-500 text-white shadow-md">
+    <div className="flex flex-col space-y-4">
+      {/* Hero Confirmation Card matching order-placed.png */}
+      <div className="rounded-[20px] border border-border bg-card p-5 text-center shadow-2xs space-y-3">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-chip text-primary shadow-xs">
+          {order.status === 'PAYMENT_PENDING' ? (
             <span className="text-2xl">⏳</span>
-          </div>
-          <h1 className="mt-3 text-xl font-black text-slate-900 tracking-tight">
-            UPI Payment Pending
-          </h1>
-          <p className="mt-1 text-xs text-slate-600 max-w-xs mx-auto">
-            Your UPI payment request has been received. Your order will be confirmed automatically once verified by the gateway webhook.
-          </p>
-
-          {/* Order Number & Copy */}
-          <div className="mt-3.5 inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3.5 py-1.5 border border-slate-200">
-            <span className="text-xs font-mono font-bold text-slate-800">
-              {order.order_no}
-            </span>
-            <button
-              type="button"
-              onClick={handleCopyOrderNo}
-              className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 cursor-pointer"
-            >
-              {copied ? '✓ Copied' : 'Copy'}
-            </button>
-          </div>
-
-          <div className="mt-2 flex items-center justify-center gap-1.5">
-            <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-900">
-              Payment Status: PENDING (UPI)
-            </span>
-          </div>
-
-          <div className="mt-3 pt-2 border-t border-amber-100/80">
-            <Link
-              href={`/orders/${order.order_no}`}
-              className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 text-xs font-extrabold text-white shadow-md hover:bg-amber-700 active:scale-98 transition-transform"
-            >
-              <span>📍 View Live Tracking &amp; Timeline &rarr;</span>
-            </Link>
-          </div>
-        </div>
-      ) : order.status === 'PAYMENT_FAILED' ? (
-        <div className="rounded-2xl border border-rose-300 bg-linear-to-b from-rose-50 to-white p-5 text-center shadow-xs">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-600 text-white shadow-md">
-            <span className="text-2xl">✕</span>
-          </div>
-          <h1 className="mt-3 text-xl font-black text-slate-900 tracking-tight">
-            UPI Payment Failed
-          </h1>
-          <p className="mt-1 text-xs text-rose-700 max-w-xs mx-auto">
-            Your UPI payment was cancelled or declined by your bank/UPI app. No money was deducted.
-          </p>
-
-          <div className="mt-3.5 inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3.5 py-1.5 border border-slate-200">
-            <span className="text-xs font-mono font-bold text-slate-800">
-              {order.order_no}
-            </span>
-            <button
-              type="button"
-              onClick={handleCopyOrderNo}
-              className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 cursor-pointer"
-            >
-              {copied ? '✓ Copied' : 'Copy'}
-            </button>
-          </div>
-
-          <div className="mt-2 flex items-center justify-center gap-1.5">
-            <span className="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-0.5 text-[11px] font-bold text-rose-900">
-              Status: PAYMENT_FAILED
-            </span>
-          </div>
-
-          <div className="mt-3 pt-2 border-t border-rose-100/80 flex flex-col gap-2">
-            <Link
-              href="/checkout"
-              className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-xs font-extrabold text-white shadow-md hover:bg-emerald-700 active:scale-98 transition-transform"
-            >
-              <span>🔄 Retry Payment at Checkout &rarr;</span>
-            </Link>
-            <Link
-              href={`/orders/${order.order_no}`}
-              className="inline-flex min-h-[40px] w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 hover:bg-slate-50 active:scale-98"
-            >
-              <span>View Order Timeline</span>
-            </Link>
-          </div>
-        </div>
-      ) : (
-        /* Celebratory Confirmation Banner for CONFIRMED+ orders */
-        <div className="rounded-2xl border border-emerald-200 bg-linear-to-b from-emerald-50 to-white p-5 text-center shadow-xs">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-md">
-            <svg
-              className="h-8 w-8"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="3"
-            >
+          ) : order.status === 'PAYMENT_FAILED' ? (
+            <span className="text-2xl text-primary">✕</span>
+          ) : (
+            <svg className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
-          </div>
-          <h1 className="mt-3 text-xl font-black text-slate-900 tracking-tight">
-            Order Confirmed!
-          </h1>
-          <p className="mt-1 text-xs text-slate-600">
-            Thank you for ordering with PlukIt. Your fresh items are being processed.
-          </p>
-
-          {/* Order Number & Copy */}
-          <div className="mt-3.5 inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3.5 py-1.5 border border-slate-200">
-            <span className="text-xs font-mono font-bold text-slate-800">
-              {order.order_no}
-            </span>
-            <button
-              type="button"
-              onClick={handleCopyOrderNo}
-              className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 cursor-pointer"
-            >
-              {copied ? '✓ Copied' : 'Copy'}
-            </button>
-          </div>
-
-          <div className="mt-2 flex items-center justify-center gap-1.5">
-            <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800">
-              Status: {order.status}
-            </span>
-          </div>
-
-          <div className="mt-3 pt-2 border-t border-emerald-100/80">
-            <Link
-              href={`/orders/${order.order_no}`}
-              className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-xs font-extrabold text-white shadow-md hover:bg-emerald-700 active:scale-98 transition-transform"
-            >
-              <span>📍 Track Live Delivery Status &rarr;</span>
-            </Link>
-          </div>
+          )}
         </div>
-      )}
 
-      {/* Payment Information Callout */}
-      {order.payment_method === 'COD' ? (
-        <div className="rounded-2xl border-2 border-emerald-600 bg-emerald-50/80 p-4 shadow-sm">
-          <div className="flex items-start gap-3">
-            <div className="text-2xl mt-0.5 shrink-0">💵</div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-sm font-extrabold text-slate-900 leading-snug break-words">
-                Pay {formatPaise(order.total_paise)} in cash to the delivery person.
-              </h2>
-              <p className="mt-1 text-xs text-slate-700 leading-normal">
-                Payment mode is <strong>Cash on Delivery (COD)</strong>. Please keep the exact amount ready upon delivery for quick handover.
-              </p>
+        <div>
+          <Badge variant={statusDisplay.variant} className="px-3 py-1">
+            &bull; {statusDisplay.label}
+          </Badge>
+        </div>
+
+        <h1 className="text-xl font-black text-heading tracking-tight leading-snug">
+          {order.status === 'PAYMENT_PENDING'
+            ? `UPI Pending: Order #${order.order_no}`
+            : order.status === 'PAYMENT_FAILED'
+            ? `Payment Failed: Order #${order.order_no}`
+            : `Aabhar! Order #${order.order_no} Placed`}
+        </h1>
+
+        <p className="text-xs font-medium text-muted max-w-xs mx-auto leading-relaxed">
+          {order.status === 'PAYMENT_PENDING'
+            ? 'Your UPI payment request has been received. Your order will be confirmed automatically once verified.'
+            : order.status === 'PAYMENT_FAILED'
+            ? 'Your payment was declined or cancelled. You can retry with UPI or Cash on Delivery.'
+            : 'Your neighbourhood store has received your order and is packing fresh produce.'}
+        </p>
+
+        {/* Copy Order Number */}
+        <div className="inline-flex items-center gap-2 rounded-full border border-border bg-chip px-3 py-1">
+          <span className="text-xs font-mono font-bold text-heading">
+            {order.order_no}
+          </span>
+          <button
+            type="button"
+            onClick={handleCopyOrderNo}
+            className="text-[11px] font-bold text-primary hover:underline cursor-pointer"
+          >
+            {copied ? '✓ Copied' : 'Copy'}
+          </button>
+        </div>
+
+        {/* 3-Step Simple Timeline matching order-placed.png */}
+        <div className="pt-2 border-t border-border/40">
+          <div className="flex items-center justify-between text-xs font-bold text-muted px-2">
+            <div className="flex items-center gap-1 text-primary">
+              <div className="h-3 w-3 rounded-full bg-primary" />
+              <span>Confirmed</span>
+            </div>
+            <div className="h-0.5 flex-1 mx-2 bg-border" />
+            <div className="flex items-center gap-1 text-muted">
+              <div className="h-3 w-3 rounded-full bg-chip border border-border" />
+              <span>Packing</span>
+            </div>
+            <div className="h-0.5 flex-1 mx-2 bg-border" />
+            <div className="flex items-center gap-1 text-muted">
+              <div className="h-3 w-3 rounded-full bg-chip border border-border" />
+              <span>On the Way</span>
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="rounded-2xl border-2 border-emerald-600 bg-emerald-50/80 p-4 shadow-sm">
-          <div className="flex items-start gap-3">
-            <div className="text-2xl mt-0.5 shrink-0">📱</div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-sm font-extrabold text-slate-900 leading-snug break-words">
-                Online UPI Payment • {formatPaise(order.total_paise)}
-              </h2>
-              <p className="mt-1 text-xs text-slate-700 leading-normal">
-                Payment mode is <strong>UPI (0% Commission)</strong>. Contactless delivery: no cash needs to be handed over at doorstep.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delivery & Customer Info */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
-          <span>📍</span>
-          <span>Delivery Details</span>
-        </h3>
-
-        <div className="text-xs text-slate-700 space-y-1">
-          <div className="font-bold text-slate-900 text-sm">
-            {order.guest_name}
-          </div>
-          <div className="text-slate-500 font-medium">
-            +91 {order.guest_phone}
-          </div>
-          <div className="text-slate-800 mt-1">
-            {order.address.line1}
-            {order.address.landmark && `, ${order.address.landmark}`}
-          </div>
-          <div className="font-medium text-emerald-700">
-            Pune Camp - {order.address.pincode}
-          </div>
-        </div>
-
-        <div className="mt-3 flex items-center gap-2 rounded-xl bg-slate-50 p-2.5 text-xs text-slate-600 border border-slate-100">
-          <span>⏱️</span>
-          <span>Estimated delivery: <strong>60-90 minutes</strong></span>
         </div>
       </div>
 
-      {/* Items Breakdown */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-          Items Ordered ({order.items.length})
-        </h3>
+      {/* Delivery Details Card matching order-placed.png */}
+      <div className="rounded-[18px] border border-border bg-card p-4 shadow-2xs space-y-3">
+        <div className="flex items-start gap-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-chip text-primary">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="9" strokeWidth={2} />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 7v5l3 3" />
+            </svg>
+          </div>
+          <div>
+            <span className="text-[11px] font-bold uppercase text-muted block">Estimated Delivery</span>
+            <span className="text-sm font-bold text-heading">
+              {DELIVERY_ETA_TEXT} <span className="text-primary font-semibold">(On Schedule)</span>
+            </span>
+          </div>
+        </div>
 
-        <div className="divide-y divide-slate-100 text-xs">
+        <div className="border-t border-border/40 pt-2.5 flex items-start gap-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-chip text-primary">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <div className="min-w-0 flex-1 text-xs">
+            <span className="text-[11px] font-bold uppercase text-muted block">Delivering to</span>
+            <span className="font-bold text-heading block">{order.guest_name}</span>
+            <span className="text-muted block mt-0.5">
+              {order.address.line1}
+              {order.address.landmark && `, ${order.address.landmark}`}
+            </span>
+            <span className="text-primary font-semibold block mt-0.5">
+              Pune, Maharashtra {order.address.pincode}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Order Summary Card matching order-placed.png */}
+      <div className="rounded-[18px] border border-border bg-card p-4 shadow-2xs space-y-3">
+        <div className="flex items-center justify-between border-b border-border/40 pb-2.5">
+          <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted">
+            Order Summary
+          </h2>
+          <span className="rounded-full bg-chip px-2.5 py-0.5 text-[11px] font-bold text-heading">
+            {order.items.length} {order.items.length === 1 ? 'Item' : 'Items'}
+          </span>
+        </div>
+
+        <div className="divide-y divide-border/40 text-xs">
           {order.items.map((item) => (
             <div key={item.id} className="py-2.5 flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
-                {item.product?.brand && (
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                    {item.product.brand}
-                  </span>
-                )}
-                <span className="font-bold text-slate-800 block truncate">
-                  {item.product?.name || 'Product Item'}
+                <span className="font-bold text-heading block truncate">
+                  {item.product?.name || 'Item'}
                 </span>
-                <span className="text-slate-500 text-[11px]">
-                  Qty: {item.qty} × {formatPaise(item.selling_price_paise)}
+                <span className="text-muted text-[11px]">
+                  {item.qty} &times; {formatPaise(item.selling_price_paise)}
                   {item.product?.unit_size && ` (${item.product.unit_size})`}
                 </span>
               </div>
-              <span className="font-black text-slate-900 shrink-0">
+              <span className="font-black text-heading shrink-0">
                 {formatPaise(item.line_total_paise)}
               </span>
             </div>
           ))}
         </div>
 
-        {/* Totals */}
-        <div className="border-t border-slate-100 pt-3 space-y-1.5 text-xs text-slate-600">
-          <div className="flex justify-between">
-            <span>Subtotal</span>
-            <span className="font-semibold text-slate-800">
-              {formatPaise(order.subtotal_paise)}
+        {/* Total Line */}
+        <div className="border-t border-border/50 pt-2.5 flex items-baseline justify-between text-xs">
+          <div>
+            <span className="font-bold text-heading block">
+              {order.payment_method === 'COD' ? 'Total to Pay via Cash (COD)' : 'Total Paid via UPI'}
+            </span>
+            <span className="text-[10px] text-muted">
+              {order.payment_method === 'COD' ? 'Keep exact cash ready' : 'Contactless doorstep delivery'}
             </span>
           </div>
-          <div className="flex justify-between">
-            <span>Delivery Fee</span>
-            {order.delivery_fee_paise === 0 ? (
-              <span className="font-bold text-emerald-600">FREE</span>
-            ) : (
-              <span className="font-semibold text-slate-800">
-                {formatPaise(order.delivery_fee_paise)}
-              </span>
-            )}
-          </div>
-          <div className="border-t border-slate-100 pt-2 flex justify-between text-base font-black text-slate-900">
-            <span>Total Payable</span>
-            <span className="text-emerald-700">
-              {formatPaise(order.total_paise)}
-            </span>
-          </div>
+          <span className="text-lg font-black text-heading">
+            {formatPaise(order.total_paise)}
+          </span>
         </div>
 
         {/* GST Invoice Section (F15) */}
         {order.invoice && (
-          <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
+          <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between">
             <div>
-              <span className="text-xs font-bold text-slate-700 block">GST Tax Invoice</span>
-              <span className="font-mono text-[11px] text-slate-400">{order.invoice.invoice_no}</span>
+              <span className="text-xs font-bold text-heading block">GST Tax Invoice</span>
+              <span className="font-mono text-[11px] text-muted">{order.invoice.invoice_no}</span>
             </div>
             <a
               href={`${API_BASE_URL}/invoices/${order.invoice.invoice_no}/pdf`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+              className="inline-flex items-center gap-1.5 rounded-[10px] border border-border bg-surface px-3 py-1.5 text-xs font-bold text-primary hover:bg-chip"
             >
               <span>📄</span>
               <span>Download PDF</span>
@@ -376,14 +275,28 @@ function OrderDetailsContent() {
         )}
       </div>
 
-      {/* Action Buttons */}
-      <div className="pt-2">
-        <Link
-          href="/"
-          className="flex min-h-[48px] w-full items-center justify-center rounded-xl bg-emerald-600 font-bold text-base text-white shadow-md hover:bg-emerald-700 active:scale-98 transition-transform"
-        >
-          Continue Shopping
+      {/* Action Buttons matching order-placed.png */}
+      <div className="space-y-2.5 pt-1">
+        <Link href={`/orders/${order.order_no}`}>
+          <Button variant="primary" size="lg" fullWidth>
+            Track Order &rarr;
+          </Button>
         </Link>
+        <Link href="/">
+          <Button variant="outline" size="lg" fullWidth>
+            Continue Shopping
+          </Button>
+        </Link>
+      </div>
+
+      {/* Footer */}
+      <div className="text-center pt-2 pb-4 space-y-0.5">
+        <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-heading">
+          <svg className="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+          </svg>
+          <span>Direct delivery to your doorstep</span>
+        </div>
       </div>
     </div>
   );
@@ -391,20 +304,21 @@ function OrderDetailsContent() {
 
 export default function OrderPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 antialiased pb-24">
-      <Header showBack title="Order Details" />
-      <main className="mx-auto w-full max-w-md flex-1 px-3 py-3">
+    <div className="flex min-h-screen flex-col bg-background text-text antialiased pb-28">
+      <Header title="Order Placed" showBack={false} />
+      <main className="mx-auto w-full max-w-md flex-1 px-4 py-4">
         <Suspense
           fallback={
-            <div className="flex min-h-[400px] flex-col items-center justify-center text-slate-400">
-              <div className="h-9 w-9 animate-spin rounded-full border-3 border-emerald-600 border-t-transparent" />
-              <span className="mt-3 text-sm font-medium">Loading order details...</span>
+            <div className="flex min-h-[400px] flex-col items-center justify-center text-muted">
+              <div className="h-9 w-9 animate-spin rounded-full border-3 border-primary border-t-transparent" />
+              <span className="mt-3 text-sm font-semibold">Loading order details...</span>
             </div>
           }
         >
           <OrderDetailsContent />
         </Suspense>
       </main>
+      <CartBar />
       <BottomNav />
     </div>
   );

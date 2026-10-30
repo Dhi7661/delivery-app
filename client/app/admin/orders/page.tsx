@@ -185,7 +185,7 @@ export default function AdminOrdersPage() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-slate-500 font-medium">Verifying admin access...</p>
         </div>
       </div>
@@ -223,7 +223,7 @@ export default function AdminOrdersPage() {
               placeholder="Search order #, customer phone, name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 focus:outline-hidden min-h-[40px]"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-primary focus:ring-1 focus:ring-primary focus:outline-hidden min-h-[40px]"
             />
             {searchQuery && (
               <button
@@ -250,7 +250,7 @@ export default function AdminOrdersPage() {
             {dateFilter && (
               <button
                 onClick={() => setDateFilter('')}
-                className="px-2.5 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl min-h-[40px] border border-rose-200"
+                className="px-2.5 py-1.5 text-xs font-bold text-primary hover:bg-surface rounded-xl min-h-[40px] border border-border"
                 title="Clear date filter"
               >
                 Clear Date
@@ -268,7 +268,7 @@ export default function AdminOrdersPage() {
             {selectedStatus !== 'ALL' && (
               <button
                 onClick={() => setSelectedStatus('ALL')}
-                className="text-[11px] font-bold text-emerald-700 hover:underline"
+                className="text-[11px] font-bold text-primary hover:underline"
               >
                 Show All ({counts.total || 0})
               </button>
@@ -285,7 +285,7 @@ export default function AdminOrdersPage() {
                   onClick={() => setSelectedStatus(tab.id)}
                   className={`flex flex-col items-center justify-center rounded-xl py-2 px-1 text-center transition-all min-h-[50px] cursor-pointer border ${
                     isSelected
-                      ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs ring-2 ring-emerald-600'
+                      ? 'bg-primary text-white border-primary shadow-xs ring-2 ring-primary'
                       : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
                   }`}
                 >
@@ -297,7 +297,7 @@ export default function AdminOrdersPage() {
                   </div>
                   <span
                     className={`mt-1 rounded-full px-2 py-0.2 text-[10px] font-black ${
-                      isSelected ? 'bg-emerald-800 text-emerald-100' : 'bg-slate-200 text-slate-700'
+                      isSelected ? 'bg-primary text-primary' : 'bg-slate-200 text-slate-700'
                     }`}
                   >
                     {count}
@@ -311,12 +311,12 @@ export default function AdminOrdersPage() {
 
         {/* Global Error Banner */}
         {actionError && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 flex items-start gap-2 animate-fade-in">
-            <span className="text-rose-600 font-bold">⚠️</span>
+          <div className="rounded-xl border border-border bg-surface p-3 text-xs text-heading flex items-start gap-2 animate-fade-in">
+            <span className="text-primary font-bold">⚠️</span>
             <span className="flex-1 font-medium">{actionError}</span>
             <button
               onClick={() => setActionError(null)}
-              className="text-xs font-bold text-rose-700 hover:text-rose-900"
+              className="text-xs font-bold text-primary hover:text-heading"
             >
               ✕
             </button>
@@ -326,7 +326,7 @@ export default function AdminOrdersPage() {
         {/* Orders List */}
         {loading ? (
           <div className="flex min-h-[260px] flex-col items-center justify-center text-slate-400">
-            <div className="h-8 w-8 animate-spin rounded-full border-3 border-emerald-600 border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-3 border-primary border-t-transparent" />
             <span className="mt-3 text-xs font-medium">Loading orders...</span>
           </div>
         ) : orders.length === 0 ? (
@@ -358,7 +358,7 @@ export default function AdminOrdersPage() {
                       <div className="flex items-center gap-2">
                         <Link
                           href={`/admin/orders/${order.id}`}
-                          className="font-black text-sm text-slate-900 hover:text-emerald-700 underline"
+                          className="font-black text-sm text-slate-900 hover:text-primary underline"
                         >
                           {order.order_no}
                         </Link>
@@ -395,7 +395,7 @@ export default function AdminOrdersPage() {
                       {customerPhone && (
                         <a
                           href={`tel:${customerPhone}`}
-                          className="text-emerald-700 hover:underline block text-[11px] font-medium"
+                          className="text-primary hover:underline block text-[11px] font-medium"
                         >
                           📞 {customerPhone}
                         </a>
@@ -403,7 +403,7 @@ export default function AdminOrdersPage() {
                     </div>
                     <div className="text-right text-[11px] text-slate-500 max-w-[180px] truncate">
                       <span>📍 {order.address.line1 || 'Pune Camp'}</span>
-                      <span className="block font-semibold text-emerald-800">
+                      <span className="block font-semibold text-primary">
                         {order.address.pincode || '411001'}
                       </span>
                     </div>
@@ -435,7 +435,7 @@ export default function AdminOrdersPage() {
                   <div className="pt-1 flex items-center justify-between gap-2 flex-wrap border-t border-slate-100">
                     <Link
                       href={`/admin/orders/${order.id}`}
-                      className="text-xs font-bold text-emerald-700 hover:text-emerald-800 underline py-1"
+                      className="text-xs font-bold text-primary hover:text-primary underline py-1"
                     >
                       View Details &rarr;
                     </Link>
@@ -459,8 +459,8 @@ export default function AdminOrdersPage() {
                               }}
                               className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all min-h-[36px] flex items-center gap-1 active:scale-95 cursor-pointer ${
                                 isCancel
-                                  ? 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
-                                  : 'bg-emerald-600 text-white shadow-2xs hover:bg-emerald-700'
+                                  ? 'bg-surface text-primary border border-border hover:bg-chip'
+                                  : 'bg-primary text-white shadow-2xs hover:bg-primary'
                               } ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                               <span>{isCancel ? '✕' : '➜'}</span>
@@ -508,7 +508,7 @@ export default function AdminOrdersPage() {
               placeholder="E.g. Customer requested cancellation / unreachable / out of stock"
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-rose-500 focus:outline-hidden"
+              className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-border focus:outline-hidden"
             />
 
             <div className="flex items-center justify-end gap-2 pt-1">
@@ -523,7 +523,7 @@ export default function AdminOrdersPage() {
                 type="button"
                 disabled={updatingOrderId === cancelModalOrder.id}
                 onClick={() => handleTransition(cancelModalOrder.id, 'CANCELLED', cancelReason)}
-                className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-rose-700 min-h-[40px] flex items-center justify-center active:scale-95 cursor-pointer"
+                className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-primary min-h-[40px] flex items-center justify-center active:scale-95 cursor-pointer"
               >
                 {updatingOrderId === cancelModalOrder.id ? 'Cancelling...' : 'Confirm Cancellation'}
               </button>

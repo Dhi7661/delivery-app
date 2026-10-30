@@ -4,11 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/Header';
-import BottomNav from '@/components/BottomNav';
+import BottomNav from '@/components/ui/BottomNav';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { formatPaise } from '@/lib/money';
 import { API_BASE_URL, SavedAddress } from '@/lib/api';
+import { THEME_TOKENS } from '@/lib/brand';
+import Button from '@/components/ui/Button';
 
 const SERVICEABLE_PINCODE = '411001';
 const COD_MAX_LIMIT_PAISE = 100000; // ₹1,000
@@ -240,7 +242,7 @@ export default function CheckoutPage() {
           return;
         }
 
-        // Live test mode keys: load Razorpay checkout script
+        // Test mode keys: load Razorpay checkout script
         const scriptLoaded = await loadRazorpayScript();
         if (scriptLoaded && (window as any).Razorpay) {
           const rzp = new (window as any).Razorpay({
@@ -254,7 +256,7 @@ export default function CheckoutPage() {
               name: name.trim(),
               contact: cleanPhone,
             },
-            theme: { color: '#059669' },
+            theme: { color: THEME_TOKENS.primary },
             config: {
               display: {
                 blocks: {
@@ -344,55 +346,66 @@ export default function CheckoutPage() {
   const loading = cartLoading || authLoading;
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 antialiased pb-24">
-      <Header showBack title={user ? 'Checkout' : 'Guest Checkout'} />
+    <div
+      style={{ paddingBottom: 'calc(10rem + env(safe-area-inset-bottom, 0px))' }}
+      className="flex min-h-screen flex-col bg-background text-text antialiased"
+    >
+      <Header
+        title="Checkout"
+        showBack
+      />
 
-      <main className="mx-auto w-full max-w-md flex-1 px-3 py-3">
+      <main className="mx-auto w-full max-w-md flex-1 px-4 py-4 space-y-4">
         {loading ? (
-          <div className="flex min-h-[300px] flex-col items-center justify-center text-slate-400">
-            <div className="h-8 w-8 animate-spin rounded-full border-3 border-emerald-600 border-t-transparent" />
-            <span className="mt-3 text-sm font-medium">Loading checkout...</span>
+          <div className="flex min-h-[300px] flex-col items-center justify-center text-muted">
+            <div className="h-8 w-8 animate-spin rounded-full border-3 border-primary border-t-transparent" />
+            <span className="mt-3 text-sm font-semibold">Loading checkout...</span>
           </div>
         ) : !cart || cart.items.length === 0 ? (
           <div className="flex min-h-[400px] flex-col items-center justify-center text-center px-4">
-            <span className="text-6xl animate-bounce">🛒</span>
-            <h1 className="mt-4 text-lg font-bold text-slate-800">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-chip text-primary">
+              <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+            </div>
+            <h1 className="mt-4 text-lg font-black text-heading">
               Your cart is empty
             </h1>
-            <p className="mt-1.5 text-sm text-slate-500 max-w-xs">
+            <p className="mt-1.5 text-xs font-medium text-muted max-w-xs">
               Add some items from your local partner shops to proceed with checkout.
             </p>
-            <Link
-              href="/"
-              className="mt-6 flex min-h-[48px] w-full max-w-xs items-center justify-center rounded-xl bg-emerald-600 font-bold text-sm text-white shadow-md hover:bg-emerald-700 active:scale-98 transition-transform"
-            >
-              Start Shopping
-            </Link>
+            <div className="mt-6 w-full max-w-xs">
+              <Link href="/">
+                <Button variant="primary" size="lg" fullWidth>
+                  Start Shopping
+                </Button>
+              </Link>
+            </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
             {/* Delivery Alert / Pincode Notice */}
-            <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3.5 py-2.5 text-xs text-emerald-800 border border-emerald-200">
-              <span className="text-base">📍</span>
+            <div className="flex items-center gap-2.5 rounded-[14px] border border-border bg-card px-3.5 py-2.5 text-xs text-heading shadow-2xs">
+              <svg className="h-4 w-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
               <div className="leading-snug">
-                Delivering to: <strong>Pune Camp ({SERVICEABLE_PINCODE})</strong>
-                <span className="block text-[11px] text-emerald-700">60-90 min hyper-local doorstep delivery</span>
+                Delivering to: <strong className="font-bold">Pune ({SERVICEABLE_PINCODE})</strong>
+                <span className="block text-[11px] font-medium text-muted">20-25 mins hyper-local delivery</span>
               </div>
             </div>
 
             {/* Guest Login Suggestion Banner */}
             {!user && (
-              <div className="flex items-center justify-between gap-2 rounded-xl bg-blue-50/90 border border-blue-200 px-3.5 py-2.5 text-xs text-blue-900 shadow-2xs">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">📱</span>
-                  <div>
-                    <span className="font-semibold block text-slate-900">Have an account?</span>
-                    <span className="text-[11px] text-blue-700">Log in to use saved addresses &amp; faster checkout</span>
-                  </div>
+              <div className="flex items-center justify-between gap-2 rounded-[14px] border border-border bg-surface px-3.5 py-2.5 text-xs shadow-2xs">
+                <div>
+                  <span className="font-bold block text-heading">Have an account?</span>
+                  <span className="text-[11px] font-medium text-muted">Log in to use saved addresses &amp; faster checkout</span>
                 </div>
                 <Link
                   href="/account"
-                  className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-blue-700 min-h-[36px] flex items-center justify-center"
+                  className="shrink-0 rounded-[10px] border border-primary bg-card px-3 py-1.5 text-xs font-bold text-primary shadow-2xs hover:bg-surface min-h-[36px] flex items-center justify-center"
                 >
                   Log In
                 </Link>
@@ -401,26 +414,26 @@ export default function CheckoutPage() {
 
             {/* Error Message Box */}
             {errorMessage && (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 flex items-start gap-2 animate-fade-in">
-                <span className="text-rose-600 text-sm">⚠️</span>
-                <span className="flex-1 font-medium">{errorMessage}</span>
+              <div className="rounded-[14px] border border-border bg-surface p-3 text-xs text-primary flex items-start gap-2">
+                <span className="text-primary text-sm font-bold">⚠️</span>
+                <span className="flex-1 font-semibold">{errorMessage}</span>
               </div>
             )}
 
             {/* COD Limit Warning */}
             {isOverCodLimit && (
-              <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 flex flex-col gap-1.5">
-                <div className="flex items-center gap-1.5 font-bold text-amber-800">
+              <div className="rounded-[14px] border border-saffron bg-surface p-3 text-xs text-heading flex flex-col gap-1.5">
+                <div className="flex items-center gap-1.5 font-extrabold text-heading">
                   <span>⚠️</span>
                   <span>Cash on Delivery Limit Exceeded</span>
                 </div>
-                <p className="text-amber-700 leading-normal">
+                <p className="text-muted leading-normal">
                   The maximum order limit for Cash on Delivery is {formatPaise(COD_MAX_LIMIT_PAISE)}. Your current total is{' '}
                   <strong>{formatPaise(cart.total_paise)}</strong>.
                 </p>
                 <Link
                   href="/cart"
-                  className="font-bold text-amber-900 underline hover:text-amber-950 mt-1"
+                  className="font-bold text-primary underline mt-1"
                 >
                   Return to Cart to adjust items &rarr;
                 </Link>
@@ -428,17 +441,16 @@ export default function CheckoutPage() {
             )}
 
             {/* Contact Details Card */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-1.5">
-                <span>👤</span>
+            <div className="rounded-[18px] border border-border bg-card p-4 shadow-2xs space-y-3">
+              <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted flex items-center gap-1.5">
                 <span>Contact Details</span>
               </h2>
 
-              <div className="space-y-3.5">
+              <div className="space-y-3">
                 {/* Full Name */}
                 <div>
-                  <label htmlFor="checkout-name" className="block text-xs font-bold text-slate-700 mb-1">
-                    Full Name <span className="text-rose-500">*</span>
+                  <label htmlFor="checkout-name" className="block text-xs font-bold text-heading mb-1">
+                    Full Name <span className="text-primary">*</span>
                   </label>
                   <input
                     id="checkout-name"
@@ -447,17 +459,17 @@ export default function CheckoutPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="E.g. Rahul Sharma"
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 focus:outline-hidden min-h-[44px]"
+                    className="w-full rounded-[12px] border border-border bg-card px-3 py-2.5 text-sm font-medium text-text placeholder-muted focus:border-primary focus:outline-hidden min-h-[44px]"
                   />
                 </div>
 
                 {/* Mobile Phone */}
                 <div>
-                  <label htmlFor="checkout-phone" className="block text-xs font-bold text-slate-700 mb-1">
-                    Mobile Number <span className="text-rose-500">*</span>
+                  <label htmlFor="checkout-phone" className="block text-xs font-bold text-heading mb-1">
+                    Mobile Number <span className="text-primary">*</span>
                   </label>
-                  <div className="flex rounded-xl border border-slate-200 overflow-hidden focus-within:border-emerald-600 focus-within:ring-1 focus-within:ring-emerald-600 min-h-[44px]">
-                    <span className="flex items-center bg-slate-50 px-3 text-xs font-bold text-slate-500 border-r border-slate-200">
+                  <div className="flex rounded-[12px] border border-border overflow-hidden focus-within:border-primary min-h-[44px]">
+                    <span className="flex items-center bg-chip px-3 text-xs font-bold text-muted border-r border-border">
                       +91
                     </span>
                     <input
@@ -469,40 +481,35 @@ export default function CheckoutPage() {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                       placeholder="10-digit mobile number"
-                      className="w-full px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-hidden"
+                      className="w-full bg-card px-3 py-2.5 text-sm font-medium text-text placeholder-muted focus:outline-hidden"
                     />
                   </div>
-                  <span className="mt-1 block text-[11px] text-slate-400">
+                  <span className="mt-1 block text-[11px] text-muted">
                     We will SMS order updates to this mobile number.
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Delivery Address Section */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <span>📍</span>
-                  <span>Delivery Address</span>
+            {/* Delivery Address Section matching checkout.png */}
+            <div className="rounded-[18px] border border-border bg-card p-4 shadow-2xs space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted">
+                  Delivery Address
                 </h2>
                 {user && (
                   <Link
                     href="/account/addresses"
-                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700 underline"
+                    className="text-xs font-bold text-primary hover:underline"
                   >
-                    Manage
+                    Change Address
                   </Link>
                 )}
               </div>
 
-              {/* Saved Addresses Picker (if user is logged in and has addresses) */}
+              {/* Saved Addresses Picker */}
               {user && savedAddresses.length > 0 && (
-                <div className="mb-3 space-y-2">
-                  <span className="text-xs font-semibold text-slate-600 block">
-                    Choose a saved address:
-                  </span>
-
+                <div className="space-y-2">
                   <div className="space-y-2">
                     {savedAddresses.map((addr) => {
                       const isSelected = !useCustomAddress && selectedAddressId === addr.id;
@@ -513,17 +520,17 @@ export default function CheckoutPage() {
                             setSelectedAddressId(addr.id);
                             setUseCustomAddress(false);
                           }}
-                          className={`cursor-pointer rounded-xl border p-3 transition-all flex items-start gap-3 min-h-[44px] ${
+                          className={`cursor-pointer rounded-[14px] border p-3 transition-all flex items-start gap-3 min-h-[44px] ${
                             isSelected
-                              ? 'border-emerald-600 bg-emerald-50/70 shadow-2xs ring-1 ring-emerald-600'
-                              : 'border-slate-200 bg-white hover:border-slate-300'
+                              ? 'border-primary bg-surface shadow-2xs'
+                              : 'border-border bg-card hover:bg-surface/50'
                           }`}
                         >
                           <div
                             className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
                               isSelected
-                                ? 'border-emerald-600 bg-emerald-600 text-white'
-                                : 'border-slate-300 bg-white'
+                                ? 'border-primary bg-primary text-card'
+                                : 'border-border bg-card'
                             }`}
                           >
                             {isSelected && <span className="text-[10px] leading-none">✓</span>}
@@ -531,22 +538,22 @@ export default function CheckoutPage() {
 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-xs font-bold text-slate-800">
+                              <span className="text-xs font-bold text-heading">
                                 {addr.line1}
                               </span>
                               {addr.is_default && (
-                                <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-emerald-800">
+                                <span className="rounded-full bg-chip px-2 py-0.5 text-[9px] font-extrabold uppercase text-heading">
                                   Default
                                 </span>
                               )}
                             </div>
                             {addr.landmark && (
-                              <p className="text-[11px] text-slate-500 mt-0.5">
+                              <p className="text-[11px] text-muted mt-0.5">
                                 Landmark: {addr.landmark}
                               </p>
                             )}
-                            <p className="text-[11px] font-medium text-emerald-700 mt-0.5">
-                              Pune Camp ({addr.pincode})
+                            <p className="text-[11px] font-semibold text-primary mt-0.5">
+                              Pincode {addr.pincode}
                             </p>
                           </div>
                         </div>
@@ -554,7 +561,6 @@ export default function CheckoutPage() {
                     })}
                   </div>
 
-                  {/* Toggle between saved and new address */}
                   <div className="pt-1 flex items-center justify-between">
                     <button
                       type="button"
@@ -566,7 +572,7 @@ export default function CheckoutPage() {
                           if (def) setSelectedAddressId(def.id);
                         }
                       }}
-                      className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 py-1 min-h-[36px]"
+                      className="text-xs font-bold text-primary hover:underline flex items-center gap-1 py-1 min-h-[36px]"
                     >
                       {useCustomAddress ? '← Use a saved address above' : '+ Deliver to another address'}
                     </button>
@@ -574,19 +580,12 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {/* Manual Address Form (shown for guests, users without saved addresses, or when custom address is active) */}
+              {/* Manual Address Form */}
               {(useCustomAddress || !user || savedAddresses.length === 0) && (
-                <div className="space-y-3.5 pt-1">
-                  {user && savedAddresses.length > 0 && (
-                    <div className="rounded-lg bg-slate-50 p-2 text-xs font-medium text-slate-600 border border-slate-200">
-                      Enter a new delivery address below:
-                    </div>
-                  )}
-
-                  {/* Address Line 1 */}
+                <div className="space-y-3 pt-1">
                   <div>
-                    <label htmlFor="checkout-address" className="block text-xs font-bold text-slate-700 mb-1">
-                      Delivery Address <span className="text-rose-500">*</span>
+                    <label htmlFor="checkout-address" className="block text-xs font-bold text-heading mb-1">
+                      Delivery Address <span className="text-primary">*</span>
                     </label>
                     <textarea
                       id="checkout-address"
@@ -595,14 +594,13 @@ export default function CheckoutPage() {
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       placeholder="Flat / House No., Building Name, Street"
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-800 placeholder-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 focus:outline-hidden"
+                      className="w-full rounded-[12px] border border-border bg-card px-3 py-2 text-sm font-medium text-text placeholder-muted focus:border-primary focus:outline-hidden"
                     />
                   </div>
 
-                  {/* Landmark */}
                   <div>
-                    <label htmlFor="checkout-landmark" className="block text-xs font-bold text-slate-700 mb-1">
-                      Landmark <span className="text-slate-400 font-normal">(Optional)</span>
+                    <label htmlFor="checkout-landmark" className="block text-xs font-bold text-heading mb-1">
+                      Landmark <span className="text-muted font-normal">(Optional)</span>
                     </label>
                     <input
                       id="checkout-landmark"
@@ -610,14 +608,13 @@ export default function CheckoutPage() {
                       value={landmark}
                       onChange={(e) => setLandmark(e.target.value)}
                       placeholder="E.g. Near Poona Club / Opposite Market"
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 focus:outline-hidden min-h-[44px]"
+                      className="w-full rounded-[12px] border border-border bg-card px-3 py-2.5 text-sm font-medium text-text placeholder-muted focus:border-primary focus:outline-hidden min-h-[44px]"
                     />
                   </div>
 
-                  {/* Pincode */}
                   <div>
-                    <label htmlFor="checkout-pincode" className="block text-xs font-bold text-slate-700 mb-1">
-                      Delivery Pincode <span className="text-rose-500">*</span>
+                    <label htmlFor="checkout-pincode" className="block text-xs font-bold text-heading mb-1">
+                      Delivery Pincode <span className="text-primary">*</span>
                     </label>
                     <input
                       id="checkout-pincode"
@@ -627,21 +624,20 @@ export default function CheckoutPage() {
                       maxLength={6}
                       value={pincode}
                       onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="411001"
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 focus:outline-hidden min-h-[44px]"
+                      placeholder="411038"
+                      className="w-full rounded-[12px] border border-border bg-card px-3 py-2.5 text-sm font-medium text-text placeholder-muted focus:border-primary focus:outline-hidden min-h-[44px]"
                     />
                     {pincode !== SERVICEABLE_PINCODE ? (
-                      <span className="mt-1 block text-[11px] font-semibold text-rose-600">
-                        ⚠️ PlukIt currently only delivers to pincode 411001.
+                      <span className="mt-1 block text-[11px] font-semibold text-primary">
+                        ⚠️ PlukIt currently only delivers to pincode {SERVICEABLE_PINCODE}.
                       </span>
                     ) : (
-                      <span className="mt-1 block text-[11px] text-emerald-700">
-                        ✓ Serviceable area: Pune Camp (411001)
+                      <span className="mt-1 block text-[11px] font-semibold text-primary">
+                        ✓ Serviceable area: Pune ({SERVICEABLE_PINCODE})
                       </span>
                     )}
                   </div>
 
-                  {/* Save to account checkbox for authenticated users */}
                   {user && (
                     <div className="pt-1">
                       {savedAddresses.length < 5 ? (
@@ -650,19 +646,15 @@ export default function CheckoutPage() {
                             type="checkbox"
                             checked={saveNewAddress}
                             onChange={(e) => setSaveNewAddress(e.target.checked)}
-                            className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                            className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                           />
-                          <span className="text-xs font-medium text-slate-700">
+                          <span className="text-xs font-medium text-heading">
                             Save this address to my account for future orders
                           </span>
                         </label>
                       ) : (
-                        <p className="text-[11px] text-slate-500">
-                          ℹ️ Address book limit reached (5/5). You can manage saved addresses in your{' '}
-                          <Link href="/account/addresses" className="font-bold underline text-emerald-600">
-                            Account
-                          </Link>
-                          .
+                        <p className="text-[11px] text-muted">
+                          ℹ️ Address book limit reached (5/5).
                         </p>
                       )}
                     </div>
@@ -671,66 +663,46 @@ export default function CheckoutPage() {
               )}
             </div>
 
-            {/* Payment Method Section (UPI + COD only, cards disabled) */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <span>💳</span>
-                  <span>Payment Method</span>
+            {/* Payment Method Section matching checkout.png */}
+            <div className="rounded-[18px] border border-border bg-card p-4 shadow-2xs space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-extrabold uppercase tracking-wider text-muted">
+                  Payment Method
                 </h2>
-                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                <span className="text-[11px] font-extrabold text-primary bg-chip px-2 py-0.5 rounded-full">
                   0% Fee via UPI
                 </span>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {/* 1. UPI Payment Option */}
                 <div
                   onClick={() => setPaymentMethod('UPI')}
-                  className={`cursor-pointer rounded-xl border-2 p-3.5 transition-all flex items-start gap-3 ${
+                  className={`cursor-pointer rounded-[14px] border p-3.5 transition-all flex items-start gap-3 ${
                     paymentMethod === 'UPI'
-                      ? 'border-emerald-600 bg-emerald-50/70 shadow-xs'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
+                      ? 'border-primary bg-surface shadow-2xs'
+                      : 'border-border bg-card hover:bg-surface/50'
                   }`}
                 >
                   <div
-                    className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold shrink-0 transition-colors ${
+                    className={`mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border text-xs font-bold shrink-0 ${
                       paymentMethod === 'UPI'
-                        ? 'bg-emerald-600 text-white'
-                        : 'border-2 border-slate-300 text-transparent'
+                        ? 'border-primary bg-primary text-card'
+                        : 'border-border bg-card text-transparent'
                     }`}
                   >
                     ✓
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between flex-wrap gap-1">
-                      <span className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                        <span>📱</span>
-                        <span>Pay Online (UPI)</span>
-                      </span>
-                      <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800 uppercase tracking-wide">
-                        Recommended
-                      </span>
+                    <div className="flex items-center justify-between gap-1 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-bold text-heading">UPI Options</span>
+                      </div>
+                      <span className="text-primary text-sm font-bold">✓</span>
                     </div>
-
-                    <p className="mt-1 text-xs text-slate-600 leading-normal">
-                      Instant payment with Google Pay, PhonePe, Paytm, BHIM, or QR code. <strong>Cards are disabled to keep fees at 0%.</strong>
+                    <p className="mt-0.5 text-xs text-muted">
+                      GPay, PhonePe, Paytm, QR. Safe and secure.
                     </p>
-
-                    <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
-                      <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200">
-                        Google Pay
-                      </span>
-                      <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200">
-                        PhonePe
-                      </span>
-                      <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200">
-                        Paytm
-                      </span>
-                      <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200">
-                        BHIM QR
-                      </span>
-                    </div>
                   </div>
                 </div>
 
@@ -745,229 +717,194 @@ export default function CheckoutPage() {
                     }
                     setPaymentMethod('COD');
                   }}
-                  className={`rounded-xl border-2 p-3.5 transition-all flex items-start gap-3 ${
+                  className={`rounded-[14px] border p-3.5 transition-all flex items-start gap-3 ${
                     isOverCodLimit
-                      ? 'border-slate-200 bg-slate-50/70 opacity-60 cursor-not-allowed'
+                      ? 'border-border bg-chip opacity-60 cursor-not-allowed'
                       : paymentMethod === 'COD'
-                      ? 'border-emerald-600 bg-emerald-50/70 shadow-xs cursor-pointer'
-                      : 'border-slate-200 bg-white hover:border-slate-300 cursor-pointer'
+                      ? 'border-primary bg-surface shadow-2xs cursor-pointer'
+                      : 'border-border bg-card hover:bg-surface/50 cursor-pointer'
                   }`}
                 >
                   <div
-                    className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold shrink-0 transition-colors ${
+                    className={`mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border text-xs font-bold shrink-0 ${
                       paymentMethod === 'COD'
-                        ? 'bg-emerald-600 text-white'
-                        : 'border-2 border-slate-300 text-transparent'
+                        ? 'border-primary bg-primary text-card'
+                        : 'border-border bg-card text-transparent'
                     }`}
                   >
                     ✓
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between flex-wrap gap-1">
-                      <span className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                        <span>💵</span>
-                        <span>Cash on Delivery (COD)</span>
-                      </span>
-                      <span
-                        className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
-                          isOverCodLimit
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        {isOverCodLimit ? 'Exceeds ₹1,000 Limit' : 'Max ₹1,000'}
+                    <div className="flex items-center justify-between gap-1 flex-wrap">
+                      <span className="text-sm font-bold text-heading">Cash / UPI on Delivery</span>
+                      <span className="rounded-full bg-chip px-2 py-0.5 text-[10px] font-bold text-muted">
+                        Max ₹1,000
                       </span>
                     </div>
-
-                    <p className="mt-1 text-xs text-slate-600 leading-normal">
-                      Pay in cash directly to our delivery executive when your parcel arrives.
+                    <p className="mt-0.5 text-xs text-muted">
+                      Society gate payment accepted via cash or partner QR.
                     </p>
+                  </div>
+                </div>
 
-                    {isOverCodLimit && (
-                      <p className="mt-1.5 text-[11px] font-semibold text-amber-700">
-                        ⚠️ Total is over ₹1,000. Please pay via UPI.
-                      </p>
-                    )}
+                {/* 3. Debit / Credit Card Option matching checkout.png */}
+                <div
+                  className="rounded-[14px] border border-border bg-card p-3.5 opacity-60 cursor-not-allowed flex items-start gap-3"
+                >
+                  <div className="mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-border bg-card shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1 flex-wrap">
+                      <span className="text-sm font-bold text-heading">Debit / Credit Card &amp; Netbanking</span>
+                      <span className="rounded-full bg-chip px-2 py-0.5 text-[9px] font-bold text-muted">
+                        Cards paused
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-muted">
+                      All major Indian banks &amp; Rupay (use UPI for fast dispatch)
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Order Summary */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Order Summary
+            {/* Bill Summary matching checkout.png */}
+            <div className="rounded-[18px] border border-border bg-card p-4 shadow-2xs space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-extrabold uppercase tracking-wider text-muted">
+                  Bill Summary
                 </h3>
-                <span className="text-xs text-slate-500 font-medium">
+                <span className="text-xs text-muted font-bold">
                   {cart.items.length} {cart.items.length === 1 ? 'item' : 'items'}
                 </span>
               </div>
 
-              {/* Items List */}
-              <div className="divide-y divide-slate-100 mb-3 max-h-48 overflow-y-auto pr-1">
-                {cart.items.map((item) => (
-                  <div key={item.id} className="py-2 flex items-center justify-between text-xs">
-                    <div className="flex-1 min-w-0 pr-2">
-                      <span className="font-semibold text-slate-800 truncate block">
-                        {item.name}
-                      </span>
-                      <span className="text-slate-400 text-[11px]">
-                        Qty: {item.qty} × {formatPaise(item.selling_price_paise)}
-                      </span>
-                    </div>
-                    <span className="font-bold text-slate-900 shrink-0">
-                      {formatPaise(item.line_total_paise)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-2 border-t border-slate-100 pt-3 text-sm text-slate-600">
+              <div className="space-y-2 text-xs font-semibold text-muted">
                 <div className="flex justify-between">
-                  <span>Items Subtotal</span>
-                  <span className="font-semibold text-slate-800">
+                  <span>Item Total ({cart.items.length} items)</span>
+                  <span className="text-heading font-bold">
                     {formatPaise(cart.subtotal_paise)}
                   </span>
                 </div>
 
                 <div className="flex justify-between">
                   <span>Delivery Fee</span>
-                  {cart.delivery_fee_paise === 0 ? (
-                    <span className="font-bold text-emerald-600">FREE</span>
-                  ) : (
-                    <span className="font-semibold text-slate-800">
-                      {formatPaise(cart.delivery_fee_paise)}
-                    </span>
-                  )}
+                  <span className="font-extrabold text-primary">
+                    {cart.delivery_fee_paise === 0 ? 'FREE' : formatPaise(cart.delivery_fee_paise)}
+                  </span>
                 </div>
 
-                <div className="border-t border-slate-100 pt-2.5 flex justify-between text-base font-black text-slate-900">
-                  <span>Total Payable</span>
-                  <span className="text-emerald-700">
+                <div className="border-t border-border/50 pt-2.5 flex justify-between text-base font-black text-heading">
+                  <div>
+                    <span>To Pay</span>
+                    <span className="block text-[10px] font-normal text-muted">
+                      Inclusive of all local taxes
+                    </span>
+                  </div>
+                  <span className="text-lg">
                     {formatPaise(cart.total_paise)}
                   </span>
                 </div>
               </div>
+            </div>
 
-              {/* Dynamic Submit Button */}
-              <button
-                type="submit"
-                disabled={submitting || (paymentMethod === 'COD' && !!isOverCodLimit)}
-                className={`mt-4 flex min-h-[48px] w-full items-center justify-center rounded-xl font-bold text-base text-white shadow-md transition-all active:scale-98 ${
-                  submitting || (paymentMethod === 'COD' && isOverCodLimit)
-                    ? 'bg-slate-300 cursor-not-allowed text-slate-500'
-                    : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 cursor-pointer'
-                }`}
-              >
-                {submitting ? (
-                  <div className="flex items-center gap-2">
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    <span>{paymentMethod === 'UPI' ? 'Connecting to UPI...' : 'Placing Order...'}</span>
-                  </div>
-                ) : paymentMethod === 'UPI' ? (
-                  <span className="flex items-center gap-1.5">
-                    <span>📱</span>
-                    <span>Pay with UPI ({formatPaise(cart.total_paise)})</span>
+            {/* Quality Note matching checkout.png */}
+            <div className="flex items-center gap-2.5 rounded-[14px] border border-border bg-surface p-3 text-xs text-muted shadow-2xs">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-card border border-border text-primary">
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span className="leading-snug">
+                Handpicked fresh daily. Zero questions return at your doorstep.
+              </span>
+            </div>
+
+            {/* Fixed Sticky Proceed to Pay Bar above BottomNav */}
+            <div
+              style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}
+              className="fixed left-0 right-0 z-40 border-t border-border bg-card/95 px-4 py-3 backdrop-blur-md shadow-sm"
+            >
+              <div className="mx-auto flex max-w-md items-center justify-between gap-4">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-extrabold uppercase text-muted">Total Payable</span>
+                  <span className="text-lg font-black text-heading">
+                    {formatPaise(cart.total_paise)}
                   </span>
-                ) : (
-                  <span>Place COD Order ({formatPaise(cart.total_paise)})</span>
-                )}
-              </button>
-
-              <p className="mt-2.5 text-center text-[11px] text-slate-400">
-                By placing your order, you agree to PlukIt terms of service.
-              </p>
+                </div>
+                <div className="flex-1 max-w-[220px]">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    fullWidth
+                    disabled={submitting || (paymentMethod === 'COD' && !!isOverCodLimit)}
+                    className="min-h-[44px]"
+                  >
+                    {submitting ? 'Placing Order...' : `Proceed to Pay ${formatPaise(cart.total_paise)} \u2192`}
+                  </Button>
+                </div>
+              </div>
             </div>
           </form>
         )}
 
         {/* Razorpay Test Payment Simulation Modal (F16 Test Mode) */}
         {testModalData && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fade-in">
-            <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl border border-slate-200">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-heading/60 backdrop-blur-xs p-4">
+            <div className="w-full max-w-sm rounded-[20px] bg-card p-5 shadow-2xl border border-border space-y-4">
+              <div className="flex items-center justify-between border-b border-border/40 pb-3">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">⚡</span>
                   <div>
-                    <h3 className="text-sm font-black text-slate-900 leading-tight">
+                    <h3 className="text-sm font-extrabold text-heading leading-tight">
                       Razorpay Test Mode
                     </h3>
-                    <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
+                    <span className="text-[10px] font-extrabold text-primary uppercase tracking-wider">
                       UPI Only (0% Commission)
                     </span>
                   </div>
                 </div>
-                <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800 uppercase">
+                <span className="rounded-full bg-chip px-2.5 py-0.5 text-[10px] font-extrabold text-heading uppercase">
                   Simulation
                 </span>
               </div>
 
-              <div className="my-4 text-center bg-slate-50 rounded-xl p-3 border border-slate-100">
-                <span className="text-xs text-slate-500 block">Total Amount</span>
-                <span className="text-2xl font-black text-slate-900">
+              <div className="text-center bg-surface rounded-[14px] p-3 border border-border">
+                <span className="text-xs text-muted block">Total Amount</span>
+                <span className="text-2xl font-black text-heading">
                   {formatPaise(testModalData.amountPaise)}
                 </span>
-                <span className="text-[11px] font-mono font-bold text-slate-500 block mt-0.5">
+                <span className="text-[11px] font-mono font-bold text-muted block mt-0.5">
                   Order #{testModalData.orderNumber}
                 </span>
               </div>
 
-              <div className="space-y-2 mb-4">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-                  Select Simulated UPI Flow
-                </span>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="rounded-xl border border-slate-200 p-2.5 text-center font-bold text-slate-700 bg-white hover:border-emerald-500">
-                    Google Pay
-                  </div>
-                  <div className="rounded-xl border border-slate-200 p-2.5 text-center font-bold text-slate-700 bg-white hover:border-emerald-500">
-                    PhonePe
-                  </div>
-                  <div className="rounded-xl border border-slate-200 p-2.5 text-center font-bold text-slate-700 bg-white hover:border-emerald-500">
-                    Paytm UPI
-                  </div>
-                  <div className="rounded-xl border border-slate-200 p-2.5 text-center font-bold text-slate-700 bg-white hover:border-emerald-500">
-                    BHIM QR
-                  </div>
-                </div>
-                <p className="text-[11px] text-slate-500 leading-tight pt-1">
-                  Cards are disabled as requested. Simulate gateway response:
-                </p>
-              </div>
-
               <div className="space-y-2">
-                <button
+                <Button
                   type="button"
+                  variant="primary"
+                  fullWidth
                   disabled={simulating}
                   onClick={handleSimulateUpiSuccess}
-                  className="w-full min-h-[44px] rounded-xl bg-emerald-600 font-bold text-xs text-white shadow-md hover:bg-emerald-700 active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  {simulating ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  ) : (
-                    <>
-                      <span>✓</span>
-                      <span>Simulate UPI Payment Success</span>
-                    </>
-                  )}
-                </button>
+                  {simulating ? 'Processing...' : 'Simulate UPI Payment Success'}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  fullWidth
+                  disabled={simulating}
+                  onClick={handleSimulateUpiFailure}
+                >
+                  Simulate Payment Failure
+                </Button>
 
                 <button
                   type="button"
                   disabled={simulating}
                   onClick={handleSimulateUpiFailure}
-                  className="w-full min-h-[42px] rounded-xl border border-rose-200 bg-rose-50 font-bold text-xs text-rose-700 hover:bg-rose-100 active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <span>✕</span>
-                  <span>Simulate Payment Failure</span>
-                </button>
-
-                <button
-                  type="button"
-                  disabled={simulating}
-                  onClick={handleSimulateUpiFailure}
-                  className="w-full min-h-[36px] rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-600 active:scale-98 transition-all cursor-pointer"
+                  className="w-full py-1 text-center text-xs font-semibold text-muted hover:text-heading"
                 >
                   Cancel &amp; Close
                 </button>

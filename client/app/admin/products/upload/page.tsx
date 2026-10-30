@@ -177,7 +177,7 @@ export default function AdminProductUploadPage() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-slate-500 font-medium">Verifying admin credentials...</p>
         </div>
       </div>
@@ -192,7 +192,7 @@ export default function AdminProductUploadPage() {
         {/* Page Banner / Header */}
         <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-2xs">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 text-xl font-bold">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-chip text-primary text-xl font-bold">
               📦
             </div>
             <div>
@@ -214,7 +214,7 @@ export default function AdminProductUploadPage() {
                 <a
                   href="/samples/sample_products.csv"
                   download
-                  className="font-bold text-emerald-700 hover:underline cursor-pointer"
+                  className="font-bold text-primary hover:underline cursor-pointer"
                 >
                   Download CSV
                 </a>
@@ -222,7 +222,7 @@ export default function AdminProductUploadPage() {
                 <button
                   type="button"
                   onClick={handleLoadSample}
-                  className="font-bold text-emerald-700 hover:underline cursor-pointer"
+                  className="font-bold text-primary hover:underline cursor-pointer"
                 >
                   Load Sample
                 </button>
@@ -244,10 +244,10 @@ export default function AdminProductUploadPage() {
                 type="file"
                 accept=".csv,text/csv"
                 onChange={handleFileChange}
-                className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-600 file:text-white file:cursor-pointer cursor-pointer"
+                className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary file:text-white file:cursor-pointer cursor-pointer"
               />
               {file && (
-                <div className="mt-2 text-xs font-medium text-emerald-700 flex items-center gap-1.5 self-start">
+                <div className="mt-2 text-xs font-medium text-primary flex items-center gap-1.5 self-start">
                   <span>📄 {file.name}</span>
                   <span className="text-slate-400">({(file.size / 1024).toFixed(1)} KB)</span>
                 </div>
@@ -257,8 +257,8 @@ export default function AdminProductUploadPage() {
 
           {/* General Error Banner */}
           {generalError && (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 flex items-start gap-2 animate-fade-in">
-              <span className="text-rose-600">⚠️</span>
+            <div className="rounded-xl border border-border bg-surface p-3 text-xs text-heading flex items-start gap-2 animate-fade-in">
+              <span className="text-primary">⚠️</span>
               <span className="font-medium flex-1">{generalError}</span>
             </div>
           )}
@@ -270,7 +270,7 @@ export default function AdminProductUploadPage() {
             className={`flex min-h-[48px] w-full items-center justify-center rounded-xl font-bold text-sm text-white shadow-md transition-all active:scale-98 ${
               uploading || !csvContent.trim()
                 ? 'bg-slate-300 cursor-not-allowed text-slate-500'
-                : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 cursor-pointer'
+                : 'bg-primary hover:bg-primary active:bg-primary cursor-pointer'
             }`}
           >
             {uploading ? (
@@ -286,26 +286,26 @@ export default function AdminProductUploadPage() {
 
         {/* Validation Errors List (All-or-Nothing) */}
         {errorList && errorList.length > 0 && (
-          <div className="rounded-2xl border border-rose-300 bg-white p-4 shadow-sm space-y-3 animate-fade-in">
+          <div className="rounded-2xl border border-border bg-white p-4 shadow-sm space-y-3 animate-fade-in">
             <div className="flex items-start gap-2">
               <span className="text-xl">❌</span>
               <div>
-                <h2 className="text-sm font-extrabold text-rose-900">
+                <h2 className="text-sm font-extrabold text-heading">
                   Import Refused: {errorList.length} Error{errorList.length > 1 ? 's' : ''} Found
                 </h2>
-                <p className="text-xs text-rose-700 mt-0.5">
+                <p className="text-xs text-primary mt-0.5">
                   Import is all-or-nothing. No products were added or changed. Correct the rows below and re-upload.
                 </p>
               </div>
             </div>
 
-            <div className="max-h-72 overflow-y-auto divide-y divide-rose-100 rounded-xl border border-rose-200 bg-rose-50/50">
+            <div className="max-h-72 overflow-y-auto divide-y divide-border/40 rounded-xl border border-border bg-surface/50">
               {errorList.map((err, idx) => (
                 <div key={idx} className="p-2.5 text-xs flex items-start gap-2">
-                  <span className="inline-block rounded-md bg-rose-200 px-1.5 py-0.5 text-[10px] font-black text-rose-900 shrink-0">
+                  <span className="inline-block rounded-md bg-chip px-1.5 py-0.5 text-[10px] font-black text-heading shrink-0">
                     Row {err.row}
                   </span>
-                  <span className="text-rose-800 font-medium">{err.error}</span>
+                  <span className="text-heading font-medium">{err.error}</span>
                 </div>
               ))}
             </div>
@@ -314,12 +314,12 @@ export default function AdminProductUploadPage() {
 
         {/* Success Results Card */}
         {successResult && (
-          <div className="rounded-2xl border border-emerald-300 bg-white p-4 shadow-sm space-y-3 animate-fade-in">
+          <div className="rounded-2xl border border-primary bg-white p-4 shadow-sm space-y-3 animate-fade-in">
             <div className="flex items-start gap-2">
               <span className="text-xl">✅</span>
               <div>
-                <h2 className="text-sm font-extrabold text-emerald-950">CSV Imported Successfully</h2>
-                <p className="text-xs text-emerald-800 mt-0.5">
+                <h2 className="text-sm font-extrabold text-primary">CSV Imported Successfully</h2>
+                <p className="text-xs text-primary mt-0.5">
                   All rows passed validation and were committed to the database.
                 </p>
               </div>
@@ -331,9 +331,9 @@ export default function AdminProductUploadPage() {
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total</span>
                 <span className="text-base font-black text-slate-900">{successResult.totalProcessed}</span>
               </div>
-              <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-2 text-center">
-                <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">Created</span>
-                <span className="text-base font-black text-emerald-900">+{successResult.createdCount}</span>
+              <div className="rounded-xl bg-chip border border-primary p-2 text-center">
+                <span className="text-[10px] font-bold text-primary uppercase tracking-wider block">Created</span>
+                <span className="text-base font-black text-primary">+{successResult.createdCount}</span>
               </div>
               <div className="rounded-xl bg-blue-50 border border-blue-200 p-2 text-center">
                 <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">Updated</span>
@@ -358,7 +358,7 @@ export default function AdminProductUploadPage() {
                     <span
                       className={`inline-block rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase ${
                         item.action === 'CREATED'
-                          ? 'bg-emerald-100 text-emerald-800'
+                          ? 'bg-chip text-primary'
                           : 'bg-blue-100 text-blue-800'
                       }`}
                     >

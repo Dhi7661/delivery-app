@@ -38,18 +38,18 @@ export default function DevOtpBanner({ otp, onAutoFill }: DevOtpBannerProps) {
     <aside
       data-testid="dev-otp-banner"
       aria-label="Development OTP helper"
-      className="rounded-xl border border-emerald-300 bg-emerald-50 p-2.5 text-xs text-emerald-800 flex items-center justify-between animate-fade-in shadow-2xs"
+      className="rounded-[14px] border border-border bg-surface p-2.5 text-xs text-heading flex items-center justify-between shadow-2xs"
     >
       <div className="flex items-center gap-1.5">
         <span aria-hidden="true">🧪</span>
         <span>
-          Dev OTP: <strong className="font-mono text-sm text-emerald-950 font-black tracking-wider">{otp}</strong>
+          Dev OTP: <strong className="font-mono text-sm text-heading font-black tracking-wider">{otp}</strong>
         </span>
       </div>
       <button
         type="button"
         onClick={() => onAutoFill(otp)}
-        className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-xs hover:bg-emerald-700 active:scale-95 cursor-pointer transition-colors"
+        className="rounded-[8px] bg-primary px-2.5 py-1 text-[11px] font-bold text-card shadow-xs hover:opacity-90 active:scale-95 cursor-pointer transition-opacity"
       >
         Auto-fill
       </button>

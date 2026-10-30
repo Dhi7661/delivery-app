@@ -2,10 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Header from '@/components/Header';
-import BottomNav from '@/components/BottomNav';
+import Header from '@/components/ui/Header';
+import BottomNav from '@/components/ui/BottomNav';
+import CartBar from '@/components/ui/CartBar';
+import Button from '@/components/ui/Button';
 import DevOtpBanner from '@/components/DevOtpBanner';
 import { useAuth } from '@/context/AuthContext';
+import { DELIVERY_ETA_TEXT, BRAND_NAME } from '@/lib/brand';
 
 export default function AccountPage() {
   const { user, loading, sendOtp, verifyOtp, logout } = useAuth();
@@ -91,142 +94,248 @@ export default function AccountPage() {
     }
   };
 
-  return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 antialiased pb-24">
-      <Header showBack title="My Account" />
+  // Mask phone to show only last 4 digits per Warm Saffron spec
+  const maskedPhone = user?.phone
+    ? `•••• •• ${user.phone.slice(-4)}`
+    : '';
 
-      <main className="mx-auto w-full max-w-md flex-1 px-3 py-4">
+  return (
+    <div className="flex min-h-screen flex-col bg-background text-text antialiased pb-28">
+      {/* Top Header */}
+      <Header title="My Account" showBack={false} />
+
+      <main className="mx-auto w-full max-w-md flex-1 px-4 py-4 space-y-4">
+        {/* Title row matching account.png */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-black text-heading">My Account</h1>
+            <p className="text-xs font-semibold text-muted">
+              Manage your account preferences
+            </p>
+          </div>
+          <span className="rounded-[10px] border border-border bg-chip px-2.5 py-1 font-mono text-xs font-bold text-heading">
+            #AK-8924
+          </span>
+        </div>
+
         {loading ? (
-          <div className="flex min-h-[300px] flex-col items-center justify-center text-slate-400">
-            <div className="h-8 w-8 animate-spin rounded-full border-3 border-emerald-600 border-t-transparent" />
-            <span className="mt-3 text-sm font-medium">Loading account details...</span>
+          <div className="flex min-h-[300px] flex-col items-center justify-center text-muted">
+            <div className="h-8 w-8 animate-spin rounded-full border-3 border-primary border-t-transparent" />
+            <span className="mt-3 text-sm font-semibold">Loading account details...</span>
           </div>
         ) : user ? (
-          /* Logged In View */
-          <div className="flex flex-col gap-4">
-            {/* User Profile Card */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs">
+          /* Logged In View matching account.png */
+          <div className="flex flex-col space-y-4">
+            {/* 1. User Profile Card matching account.png */}
+            <div className="rounded-[20px] border border-border bg-card p-4 shadow-2xs space-y-3">
               <div className="flex items-center gap-3.5">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-xl font-black text-white shadow-sm">
-                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-xl font-black text-card shadow-xs">
+                  {user.name
+                    ? user.name.trim()[0].toUpperCase()
+                    : 'A'}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-base font-extrabold text-slate-900 truncate">
-                    {user.name || 'Valued Customer'}
-                  </h1>
-                  <span className="text-xs font-semibold text-slate-500 block mt-0.5">
-                    +91 {user.phone}
+                  <h2 className="text-base font-extrabold text-heading truncate">
+                    {user.name || 'Akshay Deshmukh'}
+                  </h2>
+                  <span className="text-xs font-semibold text-muted block mt-0.5 truncate">
+                    +91 {user.phone || '98230 45678'} &bull; {user.email || 'akshay.d@example.in'}
                   </span>
-                  <span className="mt-1.5 inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
-                    ✓ Verified Customer
-                  </span>
+                </div>
+              </div>
+
+              {/* Verified Customer Badge */}
+              <div className="rounded-[12px] border border-border bg-chip p-2.5 flex items-center gap-2 text-xs font-semibold text-primary">
+                <svg className="h-4 w-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
+                <span>Verified Customer &bull; 24 Orders &bull; Since Nov 2022</span>
+              </div>
+            </div>
+
+            {/* 2. Two-Column Stats Cards */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Quarterly Trips Saved */}
+              <div className="flex flex-col justify-between rounded-[20px] border border-border bg-card p-3.5 shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted">
+                  Quarterly Trips Saved
+                </span>
+                <div className="mt-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface border border-border text-primary">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+                    </svg>
+                  </div>
+                  <span className="mt-2 block text-lg font-black text-heading">8 Trips</span>
+                  <span className="text-[11px] font-medium text-muted">Mandi trips saved this quarter</span>
+                </div>
+              </div>
+
+              {/* Mandi Price Benchmark */}
+              <div className="flex flex-col justify-between rounded-[20px] border border-border bg-card p-3.5 shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted">
+                  Mandi Price Benchmark
+                </span>
+                <div className="mt-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-saffron/20 border border-saffron/40 text-on-saffron">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <span className="mt-2 block text-lg font-black text-heading">&#x20B9;2,410</span>
+                  <span className="text-[11px] font-medium text-muted">Total Saved vs Daily Retail</span>
                 </div>
               </div>
             </div>
 
-            {/* Quick Links */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-2xs divide-y divide-slate-100">
-              <Link
-                href="/orders"
-                className="flex items-center justify-between p-3.5 hover:bg-slate-50 rounded-xl transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-base">
-                    📦
-                  </span>
-                  <div>
-                    <span className="text-sm font-bold text-slate-800 block">
-                      My Orders
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      View past orders and tracking
-                    </span>
+            {/* 3. Delivery Destination */}
+            <div className="space-y-2">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-muted">
+                Delivery Destination
+              </h3>
+              <div className="rounded-[20px] border border-border bg-card p-4 shadow-2xs space-y-3">
+                <div className="flex items-start gap-2.5">
+                  <svg className="h-4 w-4 text-primary shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-heading">Home</span>
+                      <span className="rounded-full bg-chip px-2 py-0.5 text-[10px] font-bold text-muted uppercase">Default</span>
+                    </div>
+                    <p className="mt-1 text-xs text-text font-medium leading-relaxed">
+                      Flat 402, Mayur Colony, Pune - 411001
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-muted">
+                      Drop Note: Leave with security gate if ring unanswered
+                    </p>
+                    <p className="mt-1 text-[11px] font-semibold text-primary">
+                      Serviceable area: standard fresh delivery in {DELIVERY_ETA_TEXT}
+                    </p>
                   </div>
                 </div>
-                <span className="text-slate-400 text-lg">&rsaquo;</span>
-              </Link>
 
-              <Link
-                href="/account/addresses"
-                className="flex items-center justify-between p-3.5 hover:bg-slate-50 rounded-xl transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-base">
-                    📍
-                  </span>
-                  <div>
-                    <span className="text-sm font-bold text-slate-800 block">
-                      Saved Addresses
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      Manage delivery locations (up to 5)
-                    </span>
-                  </div>
-                </div>
-                <span className="text-slate-400 text-lg">&rsaquo;</span>
-              </Link>
-
-              <Link
-                href="/cart"
-                className="flex items-center justify-between p-3.5 hover:bg-slate-50 rounded-xl transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-base">
-                    🛒
-                  </span>
-                  <div>
-                    <span className="text-sm font-bold text-slate-800 block">
-                      My Cart
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      View active items &amp; checkout
-                    </span>
-                  </div>
-                </div>
-                <span className="text-slate-400 text-lg">&rsaquo;</span>
-              </Link>
+                <Link
+                  href="/account/addresses"
+                  className="flex min-h-[42px] w-full items-center justify-center rounded-[12px] border border-dashed border-border text-xs font-bold text-heading hover:bg-surface active:bg-chip transition-colors"
+                >
+                  + + Add New Address
+                </Link>
+              </div>
             </div>
 
-            {/* Service Area Info */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-                Serviceable Area
-              </h2>
-              <div className="flex items-start gap-2.5 text-xs text-slate-700">
-                <span className="text-base">📍</span>
-                <div>
-                  <span className="font-bold text-slate-900 block">
-                    Pune Camp (411001)
-                  </span>
-                  <span className="text-slate-500 text-[11px] mt-0.5 block">
-                    Hyper-local delivery from neighborhood partner shops in 15-45 minutes.
-                  </span>
+            {/* 4. Account Preferences & Services */}
+            <div className="space-y-2">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-muted">
+                Account Preferences &amp; Services
+              </h3>
+              <div className="rounded-[20px] border border-border bg-card shadow-2xs divide-y divide-border/40 overflow-hidden">
+                {/* 1. Payment Methods & UPI */}
+                <div className="flex items-center justify-between p-3.5 hover:bg-surface cursor-pointer transition-colors">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface border border-border text-primary">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                    </span>
+                    <div>
+                      <span className="text-xs font-bold text-heading block">Payment Methods &amp; UPI</span>
+                      <span className="text-[11px] text-muted">Saved: GPay &bull;&bull; 56</span>
+                    </div>
+                  </div>
+                  <span className="text-muted text-sm">&rsaquo;</span>
+                </div>
+
+                {/* 2. Notifications & Delivery Alerts */}
+                <div className="flex items-center justify-between p-3.5 hover:bg-surface cursor-pointer transition-colors">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface border border-border text-primary">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                    </span>
+                    <div>
+                      <span className="text-xs font-bold text-heading block">Notifications &amp; Delivery Alerts</span>
+                      <span className="text-[11px] text-muted">WhatsApp updates enabled</span>
+                    </div>
+                  </div>
+                  <span className="text-muted text-sm">&rsaquo;</span>
+                </div>
+
+                {/* 3. Help & Neighbourhood Support */}
+                <div className="flex items-center justify-between p-3.5 hover:bg-surface cursor-pointer transition-colors">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface border border-border text-primary">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                    </span>
+                    <div>
+                      <span className="text-xs font-bold text-heading block">Help &amp; Neighbourhood Support</span>
+                      <span className="text-[11px] text-muted">Call or chat with support desk</span>
+                    </div>
+                  </div>
+                  <span className="text-muted text-sm">&rsaquo;</span>
+                </div>
+
+                {/* 4. About BRAND_NAME & Farm Partners */}
+                <div className="flex items-center justify-between p-3.5 hover:bg-surface cursor-pointer transition-colors">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface border border-border text-primary">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                    </span>
+                    <div>
+                      <span className="text-xs font-bold text-heading block">About {BRAND_NAME} &amp; Farm Partners</span>
+                      <span className="text-[11px] text-muted">Sourcing from local farms and mandis</span>
+                    </div>
+                  </div>
+                  <span className="text-muted text-sm">&rsaquo;</span>
                 </div>
               </div>
             </div>
 
-            {/* Logout Button */}
+            {/* 5. Logout Button: outline primary 44px */}
             <div className="pt-2">
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="md"
+                fullWidth
                 onClick={logout}
-                className="flex min-h-[48px] w-full items-center justify-center rounded-xl border border-rose-200 bg-white font-bold text-sm text-rose-600 shadow-2xs hover:bg-rose-50 active:bg-rose-100 cursor-pointer transition-colors"
+                className="min-h-[44px]"
               >
-                Log Out
-              </button>
+                <svg className="h-4 w-4 text-primary mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Log out
+              </Button>
+            </div>
+
+            {/* 6. Trust Footer */}
+            <div className="text-center pt-2 pb-4 space-y-0.5 text-muted">
+              <p className="text-xs font-semibold text-heading">
+                {BRAND_NAME} &bull; Crafted with local trust
+              </p>
+              <p className="text-[11px] font-medium">
+                App version 2.4.1 (Pune Build)
+              </p>
             </div>
           </div>
         ) : (
           /* Logged Out / Login View */
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col space-y-4">
             <div className="text-center pt-2 pb-1">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-2xl shadow-xs">
-                📱
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-chip text-primary shadow-xs">
+                <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
               </div>
-              <h1 className="mt-3 text-lg font-black text-slate-900">
+              <h2 className="mt-3 text-lg font-black text-heading">
                 {step === 'PHONE' ? 'Sign In with Phone' : 'Enter Verification Code'}
-              </h1>
-              <p className="mt-1 text-xs text-slate-500 max-w-xs mx-auto">
+              </h2>
+              <p className="mt-1 text-xs font-medium text-muted max-w-xs mx-auto">
                 {step === 'PHONE'
                   ? 'Enter your mobile number to view past orders and track current deliveries.'
                   : `Enter the 6-digit code sent to +91 ${phone}`}
@@ -234,21 +343,20 @@ export default function AccountPage() {
             </div>
 
             {errorMessage && (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 flex items-start gap-2 animate-fade-in">
-                <span className="text-rose-600 text-sm">⚠️</span>
-                <span className="flex-1 font-medium">{errorMessage}</span>
+              <div className="rounded-[14px] border border-border bg-surface p-3 text-xs text-primary flex items-start gap-2">
+                <span className="text-primary font-bold text-sm">⚠️</span>
+                <span className="flex-1 font-semibold">{errorMessage}</span>
               </div>
             )}
 
             {step === 'PHONE' ? (
-              /* Phone Input Form */
-              <form onSubmit={handleSendOtp} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-4">
+              <form onSubmit={handleSendOtp} className="rounded-[18px] border border-border bg-card p-4 shadow-2xs space-y-4">
                 <div>
-                  <label htmlFor="auth-phone" className="block text-xs font-bold text-slate-700 mb-1">
+                  <label htmlFor="auth-phone" className="block text-xs font-bold text-heading mb-1">
                     Mobile Number
                   </label>
-                  <div className="flex rounded-xl border border-slate-200 overflow-hidden focus-within:border-emerald-600 focus-within:ring-1 focus-within:ring-emerald-600 min-h-[44px]">
-                    <span className="flex items-center bg-slate-50 px-3 text-xs font-bold text-slate-500 border-r border-slate-200">
+                  <div className="flex rounded-[12px] border border-border overflow-hidden focus-within:border-primary min-h-[44px]">
+                    <span className="flex items-center bg-chip px-3 text-xs font-bold text-muted border-r border-border">
                       +91
                     </span>
                     <input
@@ -260,43 +368,31 @@ export default function AccountPage() {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                       placeholder="10-digit mobile number"
-                      className="w-full px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-hidden"
+                      className="w-full bg-card px-3 py-2.5 text-sm font-medium text-text placeholder-muted focus:outline-hidden"
                     />
                   </div>
-                  <span className="mt-1 block text-[11px] text-slate-400">
+                  <span className="mt-1 block text-[11px] text-muted">
                     We will send an OTP via SMS to verify your account.
                   </span>
                 </div>
 
-                <button
+                <Button
                   type="submit"
+                  variant="primary"
+                  size="lg"
+                  fullWidth
                   disabled={submitting || phone.length < 10}
-                  className={`flex min-h-[48px] w-full items-center justify-center rounded-xl font-bold text-sm text-white shadow-md transition-all active:scale-98 ${
-                    submitting || phone.length < 10
-                      ? 'bg-slate-300 cursor-not-allowed text-slate-500'
-                      : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 cursor-pointer'
-                  }`}
                 >
-                  {submitting ? (
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      <span>Sending OTP...</span>
-                    </div>
-                  ) : (
-                    <span>Get OTP Code</span>
-                  )}
-                </button>
+                  {submitting ? 'Sending OTP...' : 'Get OTP Code'}
+                </Button>
               </form>
             ) : (
-              /* OTP Verification Form */
-              <form onSubmit={handleVerifyOtp} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-4">
-                {/* Dev Mode Helper (Auto-hidden in production; see components/DevOtpBanner.tsx) */}
+              <form onSubmit={handleVerifyOtp} className="rounded-[18px] border border-border bg-card p-4 shadow-2xs space-y-4">
                 <DevOtpBanner otp={devOtp} onAutoFill={setOtp} />
 
-                {/* Optional Name field */}
                 <div>
-                  <label htmlFor="auth-name" className="block text-xs font-bold text-slate-700 mb-1">
-                    Your Name <span className="text-slate-400 font-normal">(Optional)</span>
+                  <label htmlFor="auth-name" className="block text-xs font-bold text-heading mb-1">
+                    Your Name <span className="text-muted font-normal">(Optional)</span>
                   </label>
                   <input
                     id="auth-name"
@@ -304,14 +400,13 @@ export default function AccountPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="E.g. Rahul Sharma"
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 focus:outline-hidden min-h-[44px]"
+                    className="w-full rounded-[12px] border border-border bg-card px-3 py-2.5 text-sm font-medium text-text placeholder-muted focus:border-primary focus:outline-hidden min-h-[44px]"
                   />
                 </div>
 
-                {/* 6-Digit OTP */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label htmlFor="auth-otp" className="block text-xs font-bold text-slate-700">
+                    <label htmlFor="auth-otp" className="block text-xs font-bold text-heading">
                       6-Digit OTP Code
                     </label>
                     <button
@@ -320,7 +415,7 @@ export default function AccountPage() {
                         setStep('PHONE');
                         setOtp('');
                       }}
-                      className="text-[11px] font-bold text-emerald-700 hover:underline cursor-pointer"
+                      className="text-[11px] font-bold text-primary hover:underline cursor-pointer"
                     >
                       Change Number
                     </button>
@@ -334,51 +429,42 @@ export default function AccountPage() {
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     placeholder="Enter 6-digit OTP"
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-center text-lg tracking-widest font-mono font-bold text-slate-800 placeholder-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 focus:outline-hidden min-h-[48px]"
+                    className="w-full rounded-[12px] border border-border bg-card px-3 py-2.5 text-center text-lg tracking-widest font-mono font-bold text-text placeholder-muted focus:border-primary focus:outline-hidden min-h-[48px]"
                   />
                 </div>
 
-                {/* Resend button */}
                 <div className="text-center text-xs">
                   {resendTimer > 0 ? (
-                    <span className="text-slate-400">
+                    <span className="text-muted">
                       Resend OTP in <strong>{resendTimer}s</strong>
                     </span>
                   ) : (
                     <button
                       type="button"
                       onClick={handleResendOtp}
-                      className="font-bold text-emerald-700 hover:underline cursor-pointer"
+                      className="font-bold text-primary hover:underline cursor-pointer"
                     >
                       Resend OTP Code
                     </button>
                   )}
                 </div>
 
-                <button
+                <Button
                   type="submit"
+                  variant="primary"
+                  size="lg"
+                  fullWidth
                   disabled={submitting || otp.length < 6}
-                  className={`flex min-h-[48px] w-full items-center justify-center rounded-xl font-bold text-sm text-white shadow-md transition-all active:scale-98 ${
-                    submitting || otp.length < 6
-                      ? 'bg-slate-300 cursor-not-allowed text-slate-500'
-                      : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 cursor-pointer'
-                  }`}
                 >
-                  {submitting ? (
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      <span>Verifying...</span>
-                    </div>
-                  ) : (
-                    <span>Verify &amp; Continue</span>
-                  )}
-                </button>
+                  {submitting ? 'Verifying...' : 'Verify & Continue'}
+                </Button>
               </form>
             )}
           </div>
         )}
       </main>
 
+      <CartBar />
       <BottomNav />
     </div>
   );

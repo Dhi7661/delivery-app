@@ -1,0 +1,53 @@
+'use client';
+
+import React from 'react';
+
+export type TabItem = string | { id: string; label: string };
+
+export interface SegmentedTabsProps {
+  tabs: TabItem[];
+  activeTab?: string;
+  activeId?: string;
+  onChange: (tab: string) => void;
+  className?: string;
+}
+
+export default function SegmentedTabs({
+  tabs,
+  activeTab,
+  activeId,
+  onChange,
+  className = '',
+}: SegmentedTabsProps) {
+  const currentActive = activeId || activeTab;
+
+  return (
+    <div
+      role="tablist"
+      className={`flex items-center gap-1 rounded-[12px] border border-border bg-surface p-1 ${className}`}
+    >
+      {tabs.map((tab) => {
+        const id = typeof tab === 'string' ? tab : tab.id;
+        const label = typeof tab === 'string' ? tab : tab.label;
+        const isActive = id === currentActive;
+
+        return (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={isActive}
+            type="button"
+            onClick={() => onChange(id)}
+            className={`flex min-h-[40px] flex-1 items-center justify-center rounded-[8px] px-3 text-xs transition-all ${
+              isActive
+                ? 'bg-card text-heading font-extrabold shadow-2xs'
+                : 'text-muted hover:text-heading font-semibold'
+            }`}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}

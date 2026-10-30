@@ -40,17 +40,17 @@ export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps)
       : 'orders');
 
   return (
-    <header className="sticky top-0 z-30 bg-slate-900 text-white border-b border-slate-800 shadow-md">
+    <nav aria-label="Admin Navigation" className="sticky top-0 z-30 bg-slate-900 text-white border-b border-slate-800 shadow-md">
       {/* Top Bar */}
       <div className="mx-auto max-w-lg px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Link href="/admin/orders" className="flex items-center gap-2">
-            <span className="w-7 h-7 bg-emerald-500 rounded-lg flex items-center justify-center font-black text-white text-sm">
+            <span className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center font-black text-white text-sm">
               P
             </span>
             <span className="font-extrabold text-base tracking-tight text-white">PlukIt</span>
           </Link>
-          <span className="px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-full text-[10px] font-black uppercase tracking-wider">
+          <span className="px-2 py-0.5 bg-slate-800 text-saffron border border-border/40 rounded-full text-[10px] font-black uppercase tracking-wider">
             Admin
           </span>
         </div>
@@ -77,7 +77,7 @@ export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps)
           href="/admin/orders"
           className={`py-2.5 px-2.5 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[42px] ${
             currentTab === 'orders'
-              ? 'border-emerald-500 text-emerald-400'
+              ? 'border-saffron text-saffron'
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -89,7 +89,7 @@ export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps)
           href="/admin/deliveries"
           className={`py-2.5 px-2.5 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[42px] ${
             currentTab === 'deliveries'
-              ? 'border-emerald-500 text-emerald-400'
+              ? 'border-saffron text-saffron'
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -101,7 +101,7 @@ export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps)
           href="/admin/products/upload"
           className={`py-2.5 px-2.5 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[42px] ${
             currentTab === 'products'
-              ? 'border-emerald-500 text-emerald-400'
+              ? 'border-saffron text-saffron'
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -113,7 +113,7 @@ export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps)
           href="/admin/notifications"
           className={`py-2.5 px-2.5 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[42px] ${
             currentTab === 'notifications'
-              ? 'border-emerald-500 text-emerald-400'
+              ? 'border-saffron text-saffron'
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -121,6 +121,6 @@ export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps)
           <span>Notifications</span>
         </Link>
       </div>
-    </header>
+    </nav>
   );
 }
