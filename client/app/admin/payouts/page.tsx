@@ -161,26 +161,44 @@ export default function AdminPayoutsPage() {
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = now.getDate();
+    const lastDayOfMonth = new Date(year, now.getMonth() + 1, 0).getDate();
 
-    // If day <= 15, default period is previous month 16-end or current month 1-15
+    // Default to the current 15-day cycle
     if (day > 15) {
+      setPeriodStart(`${year}-${month}-16`);
+      setPeriodEnd(`${year}-${month}-${lastDayOfMonth}`);
+    } else {
       setPeriodStart(`${year}-${month}-01`);
       setPeriodEnd(`${year}-${month}-15`);
-    } else {
-      // Previous month
-      const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth();
-      const prevYear = now.getMonth() === 0 ? year - 1 : year;
-      const prevMonthStr = String(prevMonth).padStart(2, '0');
-      const lastDayPrev = new Date(prevYear, prevMonth, 0).getDate();
-      setPeriodStart(`${prevYear}-${prevMonthStr}-16`);
-      setPeriodEnd(`${prevYear}-${prevMonthStr}-${lastDayPrev}`);
     }
 
-    if (shopId) setSelectedShopId(shopId);
-    else if (shops.length > 0) setSelectedShopId(shops[0].id);
+    if (shopId) {
+      setSelectedShopId(shopId);
+    } else {
+      const shopWithEntries = shops.find((s) => s.unbilledCount > 0);
+      setSelectedShopId(shopWithEntries ? shopWithEntries.id : shops[0]?.id || '');
+    }
 
     setPreviewData(null);
     setShowGenerateModal(true);
+  };
+
+  const setQuickPreset = (preset: 'first_half' | 'second_half' | 'full_month') => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+
+    if (preset === 'first_half') {
+      setPeriodStart(`${year}-${month}-01`);
+      setPeriodEnd(`${year}-${month}-15`);
+    } else if (preset === 'second_half') {
+      setPeriodStart(`${year}-${month}-16`);
+      setPeriodEnd(`${year}-${month}-${lastDay}`);
+    } else {
+      setPeriodStart(`${year}-${month}-01`);
+      setPeriodEnd(`${year}-${month}-${lastDay}`);
+    }
   };
 
   // Live preview for generate payout
@@ -790,32 +808,59 @@ export default function AdminPayoutsPage() {
                 >
                   {shops.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name} ({s.unbilledCount} unbilled entries — {formatPaise(s.netPayablePaise)})
+                      {s.name} ({s.unbilledCount} unbilled {s.unbilledCount === 1 ? 'entry' : 'entries'} — {formatPaise(s.netPayablePaise)}) {s.unbilledCount > 0 ? '✓ Ready' : '(0 unbilled)'}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">Period Start</label>
-                  <input
-                    type="date"
-                    value={periodStart}
-                    onChange={(e) => setPeriodStart(e.target.value)}
-                    required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-saffron"
-                  />
+              <div>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <span className="text-[11px] text-slate-400 font-semibold mr-1">Period Presets:</span>
+                  <button
+                    type="button"
+                    onClick={() => setQuickPreset('second_half')}
+                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-slate-200 rounded-lg border border-slate-700 cursor-pointer"
+                  >
+                    16th – End
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQuickPreset('first_half')}
+                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-slate-200 rounded-lg border border-slate-700 cursor-pointer"
+                  >
+                    1st – 15th
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQuickPreset('full_month')}
+                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-slate-200 rounded-lg border border-slate-700 cursor-pointer"
+                  >
+                    Full Month
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">Period End</label>
-                  <input
-                    type="date"
-                    value={periodEnd}
-                    onChange={(e) => setPeriodEnd(e.target.value)}
-                    required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-saffron"
-                  />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">Period Start</label>
+                    <input
+                      type="date"
+                      value={periodStart}
+                      onChange={(e) => setPeriodStart(e.target.value)}
+                      required
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-saffron"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">Period End</label>
+                    <input
+                      type="date"
+                      value={periodEnd}
+                      onChange={(e) => setPeriodEnd(e.target.value)}
+                      required
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-saffron"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -825,26 +870,42 @@ export default function AdminPayoutsPage() {
                   Period Ledger Preview
                 </div>
                 {previewLoading ? (
-                  <div className="text-xs text-slate-500 py-2">Computing unbilled balance...</div>
-                ) : previewData ? (
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Matched Entries:</span>
-                      <strong className="text-slate-200">{previewData.count} items</strong>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Gross Sales:</span>
-                      <span className="text-emerald-400 font-semibold">{formatPaise(previewData.grossSalesPaise)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Returns/Deductions:</span>
-                      <span className="text-rose-400 font-semibold">-{formatPaise(previewData.deductionsPaise)}</span>
-                    </div>
-                    <div className="flex justify-between pt-2 border-t border-slate-800 font-black text-sm">
-                      <span className="text-white">Net Payout Amount:</span>
-                      <span className="text-emerald-400">{formatPaise(previewData.netAmountPaise)}</span>
-                    </div>
+                  <div className="text-xs text-slate-400 py-3 flex items-center justify-center gap-2">
+                    <span className="animate-spin">⏳</span>
+                    <span>Checking unbilled ledger entries...</span>
                   </div>
+                ) : previewData ? (
+                  previewData.count > 0 ? (
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Matched Entries:</span>
+                        <strong className="text-slate-200">{previewData.count} items</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Gross Sales:</span>
+                        <span className="text-emerald-400 font-semibold">{formatPaise(previewData.grossSalesPaise)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Returns/Deductions:</span>
+                        <span className="text-rose-400 font-semibold">-{formatPaise(previewData.deductionsPaise)}</span>
+                      </div>
+                      <div className="flex justify-between pt-2 border-t border-slate-800 font-black text-sm">
+                        <span className="text-white">Net Payout Amount:</span>
+                        <span className="text-emerald-400">{formatPaise(previewData.netAmountPaise)}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-amber-950/40 border border-amber-600/40 rounded-xl text-xs text-amber-300 space-y-1">
+                      <div className="font-bold flex items-center gap-1.5">
+                        <span>⚠️</span>
+                        <span>0 Unbilled Entries in This Period</span>
+                      </div>
+                      <p className="text-[11px] text-amber-200/80 leading-relaxed">
+                        No unbilled sales or deductions found for this shop between <strong>{periodStart}</strong> and <strong>{periodEnd}</strong>.
+                        Click <strong>&quot;16th – End&quot;</strong> or <strong>&quot;Full Month&quot;</strong> above, or select another partner shop.
+                      </p>
+                    </div>
+                  )
                 ) : (
                   <div className="text-xs text-slate-500">Pick shop and dates to preview total.</div>
                 )}
@@ -860,10 +921,25 @@ export default function AdminPayoutsPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={generatingPayout || !previewData || previewData.count === 0}
-                  className="px-5 py-2.5 bg-saffron hover:bg-saffron/90 text-slate-950 font-black text-xs rounded-xl shadow-lg cursor-pointer disabled:opacity-50"
+                  disabled={generatingPayout || previewLoading || !previewData || previewData.count === 0}
+                  className={`px-5 py-2.5 font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-1.5 ${
+                    !previewData || previewData.count === 0
+                      ? 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-60'
+                      : 'bg-saffron hover:bg-saffron/90 text-slate-950 cursor-pointer active:scale-95'
+                  }`}
+                  title={
+                    !previewData || previewData.count === 0
+                      ? 'No unbilled entries found in selected date range'
+                      : 'Schedule 15-day payout run'
+                  }
                 >
-                  {generatingPayout ? 'Generating...' : 'Confirm & Schedule Payout'}
+                  {generatingPayout
+                    ? 'Scheduling Payout...'
+                    : previewLoading
+                    ? 'Calculating...'
+                    : previewData && previewData.count > 0
+                    ? `Confirm & Schedule Payout (${formatPaise(previewData.netAmountPaise)})`
+                    : 'No Entries to Settle'}
                 </button>
               </div>
             </form>
@@ -1247,3 +1323,4 @@ export default function AdminPayoutsPage() {
     </div>
   );
 }
+
