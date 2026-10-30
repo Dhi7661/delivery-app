@@ -175,6 +175,7 @@ model Shop {
   ledger_entries  ShopLedger[]
   payouts         Payout[]
   order_items     OrderItem[]
+  issues          OperationalIssue[]
 
   @@map("shops")
 }
@@ -282,6 +283,7 @@ model Order {
   invoice             Invoice?
   support_tickets     SupportTicket[]
   notifications       OrderNotification[]
+  issues              OperationalIssue[]
 
   @@index([user_id, created_at(sort: Desc)])
   @@index([status, created_at])
@@ -546,4 +548,74 @@ model ProcessedEvent {
 
   @@index([event_id])
   @@map("processed_events")
+}
+
+// -----------------------------------------------------------------------------
+// F22: Soft Launch Operations Models
+// -----------------------------------------------------------------------------
+
+enum IssueCategory {
+  LATE_DELIVERY
+  WRONG_ITEM
+  REFUSED_ORDER
+  DAMAGED_ITEM
+  REFUND_DISPUTE
+  OTHER
+}
+
+enum IssueSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IssueStatus {
+  OPEN
+  INVESTIGATING
+  RESOLVED
+}
+
+model OperationalIssue {
+  id               String        @id @default(uuid())
+  order_id         String?
+  order_no         String?
+  shop_id          String?
+  category         IssueCategory @default(OTHER)
+  severity         IssueSeverity @default(MEDIUM)
+  status           IssueStatus   @default(OPEN)
+  description      String
+  root_cause       String?
+  resolution_notes String?
+  reported_by      String        @default("ADMIN") // e.g. "CUSTOMER", "RIDER", "SHOP", "ADMIN"
+  resolved_at      DateTime?
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
+
+  order            Order?        @relation(fields: [order_id], references: [id], onDelete: SetNull)
+  shop             Shop?         @relation(fields: [shop_id], references: [id], onDelete: SetNull)
+
+  @@index([status, created_at])
+  @@index([category])
+  @@index([shop_id])
+  @@map("operational_issues")
+}
+
+model CashReconciliation {
+  id                    String   @id @default(uuid())
+  date                  String   // YYYY-MM-DD
+  rider_name            String   // Rider / Delivery champion name or ID
+  orders_count          Int      @default(0)
+  expected_cash_paise   Int      @default(0)
+  collected_cash_paise  Int      @default(0)
+  variance_paise        Int      @default(0) // collected - expected (negative = shortage)
+  status                String   @default("BALANCED") // "BALANCED", "DISCREPANCY", "RESOLVED"
+  notes                 String?
+  reconciled_by         String?  // Admin ID / email
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  @@unique([date, rider_name])
+  @@index([date])
+  @@map("cash_reconciliations")
 }
