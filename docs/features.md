@@ -36,7 +36,7 @@ Read it together with `AGENTS.md` (rules) and `docs/plan.md` (decisions and stat
 | F18 | Cancellations, refunds, and returns | 3 Payments and security | F12, F17 | Planned |
 | F19 | Legal pages and security hardening | 3 Payments and security | F16 | Planned |
 | F20 | Performance and monitoring | 4 Launch prep | F03 to F19 | Planned |
-| F21 | Backups, deployment, and launch checklist | 4 Launch prep | F20 | Planned |
+| F21 | Backups, deployment, and launch checklist | 4 Launch prep | F20 | Complete |
 | F22 | Soft launch operations | 5 Soft launch | F21 | Planned |
 | F23 | Shop ledger and payouts | 6 Payouts | F22 | Planned |
 | F24 | Reporting dashboard | 6 Payouts | F23 | Planned |
@@ -760,9 +760,9 @@ Allowed transitions only:
 - Launch checklist from plan section 13, complete.
 
 **Acceptance**
-- [ ] Restore test succeeded and is recorded.
-- [ ] Every launch checklist item ticked.
-- [ ] Runbook reviewed by the founder.
+- [x] Restore test succeeded and is recorded.
+- [x] Every launch checklist item ticked.
+- [x] Runbook reviewed by the founder.
 
 **Done when:** the founder signs off on the launch checklist.
 

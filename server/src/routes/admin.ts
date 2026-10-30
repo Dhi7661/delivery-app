@@ -15,6 +15,7 @@ import { dispatchOrderStatusNotifications, retryNotification } from '../lib/noti
 import { generateOrderInvoice, generateCreditNote } from '../lib/invoice.js';
 import { cancelOrderWithRefund, processOrderReturn } from '../lib/cancellation.js';
 import { catalogCache } from '../lib/catalogCache.js';
+import { isOnlinePaymentsEnabled, setOnlinePaymentsEnabled } from '../lib/settings.js';
 
 export const adminRouter = Router();
 
@@ -926,3 +927,59 @@ adminRouter.post('/admin/notifications/:id/retry', requireAdminAuth, async (req:
   }
 });
 
+
+/**
+ * GET /api/admin/settings
+ * Returns system settings with online payment status.
+ */
+adminRouter.get('/admin/settings', requireAdminAuth, async (_req: Request, res: Response) => {
+  try {
+    const settings = await prisma.setting.findMany({ orderBy: { key: 'asc' } });
+    const onlinePaymentsEnabled = await isOnlinePaymentsEnabled();
+    const recentLogs = await prisma.auditLog.findMany({
+      orderBy: { created_at: 'desc' },
+      take: 10,
+    });
+    res.status(200).json({ settings, onlinePaymentsEnabled, recentLogs });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to fetch settings' });
+  }
+});
+
+/**
+ * PATCH /api/admin/settings/payments
+ * Emergency kill-switch for online payments (UPI).
+ */
+adminRouter.patch('/admin/settings/payments', requireAdminAuth, async (req: Request, res: Response) => {
+  try {
+    const { enabled, reason } = req.body;
+    if (typeof enabled !== 'boolean') {
+      return res.status(400).json({ error: 'enabled boolean is required.' });
+    }
+
+    await setOnlinePaymentsEnabled(enabled);
+
+    await prisma.auditLog.create({
+      data: {
+        actor_id: (req as any).adminUser?.id || 'admin',
+        action: 'PAYMENT_KILL_SWITCH_TOGGLE',
+        entity: 'settings',
+        entity_id: 'ONLINE_PAYMENTS_ENABLED',
+        new_value: {
+          enabled,
+          reason: typeof reason === 'string' && reason.trim() ? reason.trim() : (enabled ? 'Online payments resumed' : 'Emergency kill-switch engaged'),
+        },
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      onlinePaymentsEnabled: enabled,
+      message: enabled
+        ? 'Online payments (UPI) ENABLED successfully.'
+        : 'Online payments (UPI) DISABLED. Store is now operating in Cash on Delivery (COD) only mode.',
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to update payment settings' });
+  }
+});

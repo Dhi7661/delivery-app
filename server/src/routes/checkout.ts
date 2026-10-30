@@ -9,6 +9,7 @@ import { getAuthenticatedUser } from './auth.js';
 import { dispatchOrderStatusNotifications, normalizePhone, maskPhone } from '../lib/notifications.js';
 import { createRazorpayGatewayOrder, getRazorpayKeyId } from '../lib/razorpay.js';
 import { cancelOrderWithRefund } from '../lib/cancellation.js';
+import { isOnlinePaymentsEnabled, getPublicSettings } from '../lib/settings.js';
 
 type CartWithItems = Prisma.CartGetPayload<{
   include: {
@@ -217,6 +218,17 @@ checkoutRouter.post('/checkout', async (req: Request, res: Response) => {
     const total_paise = subtotal_paise + delivery_fee_paise;
 
     // 4. Check total against COD limit ONLY if payment method is COD
+    // F21: Payment Gateway Kill-Switch Check
+    if (paymentMethod === 'UPI') {
+      const onlineEnabled = await isOnlinePaymentsEnabled();
+      if (!onlineEnabled) {
+        return res.status(400).json({
+          error: 'Online payments are temporarily paused for maintenance. Please place your order using Cash on Delivery (COD).',
+          code: 'ONLINE_PAYMENTS_DISABLED',
+        });
+      }
+    }
+
     if (paymentMethod === 'COD') {
       const codAllowed = await isCodAllowed(total_paise);
       if (!codAllowed) {
@@ -634,3 +646,17 @@ checkoutRouter.post('/orders/:orderNo/cancel', async (req: Request, res: Respons
   }
 });
 
+
+/**
+ * GET /api/settings/public
+ * Exposes non-sensitive checkout configurations (fees, COD limits, payment availability).
+ */
+checkoutRouter.get('/settings/public', async (_req: Request, res: Response) => {
+  try {
+    const settings = await getPublicSettings();
+    res.status(200).json(settings);
+  } catch (error) {
+    console.error('Error fetching public settings:', error);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});

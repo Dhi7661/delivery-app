@@ -36,3 +36,7 @@ Thumbs.db
 # Verification screenshots
 /*_390.png
 /headers_10_comparison.png
+
+# Database Backups
+backups/*.sql
+!backups/.gitkeep
