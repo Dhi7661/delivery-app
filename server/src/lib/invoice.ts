@@ -574,10 +574,18 @@ export async function generateOrderInvoice(orderId: string) {
 }
 
 /**
- * Generate a Credit Note for a cancelled or returned order that has an invoice.
+ * Generate a Credit Note for a cancelled or returned order that has an invoice (F15 & F18).
  * Rule: Cancelled or returned orders get a credit note. Invoices are never deleted or reused.
  */
-export async function generateCreditNote(orderId: string, reason: string) {
+export async function generateCreditNote(
+  orderId: string,
+  reason: string,
+  partialAmounts?: {
+    taxableAmountPaise: number;
+    gstAmountPaise: number;
+    totalPaise: number;
+  }
+) {
   // Check if order has an existing invoice
   const invoice = await prisma.invoice.findUnique({
     where: { order_id: orderId },
@@ -592,13 +600,17 @@ export async function generateCreditNote(orderId: string, reason: string) {
     return null;
   }
 
-  // Idempotency: If credit note for this invoice already exists
-  if (invoice.credit_notes.length > 0) {
+  // Idempotency: If credit note for this invoice already exists and not a partial return credit note
+  if (invoice.credit_notes.length > 0 && !partialAmounts) {
     return invoice.credit_notes[0];
   }
 
   const creditNoteNo = await getNextCreditNoteNumber(new Date());
   const creditNoteDate = new Date();
+
+  const taxableAmountPaise = partialAmounts?.taxableAmountPaise ?? invoice.taxable_amount_paise;
+  const gstAmountPaise = partialAmounts?.gstAmountPaise ?? invoice.gst_amount_paise;
+  const totalPaise = partialAmounts?.totalPaise ?? invoice.total_paise;
 
   // Build Credit Note PDF buffer
   const pdfBuffer = await buildCreditNotePdfBuffer({
@@ -610,9 +622,9 @@ export async function generateCreditNote(orderId: string, reason: string) {
     reason,
     buyerName: invoice.buyer_name,
     buyerPhone: invoice.buyer_phone || '',
-    taxableAmountPaise: invoice.taxable_amount_paise,
-    gstAmountPaise: invoice.gst_amount_paise,
-    totalPaise: invoice.total_paise,
+    taxableAmountPaise,
+    gstAmountPaise,
+    totalPaise,
   });
 
   const pdfFileName = `${creditNoteNo}.pdf`;
@@ -624,9 +636,9 @@ export async function generateCreditNote(orderId: string, reason: string) {
       invoice_id: invoice.id,
       credit_note_no: creditNoteNo,
       reason,
-      taxable_amount_paise: invoice.taxable_amount_paise,
-      gst_amount_paise: invoice.gst_amount_paise,
-      total_paise: invoice.total_paise,
+      taxable_amount_paise: taxableAmountPaise,
+      gst_amount_paise: gstAmountPaise,
+      total_paise: totalPaise,
       pdf_url: pdfUrl,
     },
   });

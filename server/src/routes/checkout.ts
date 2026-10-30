@@ -8,6 +8,7 @@ import { getNextOrderNumber } from '../lib/order.js';
 import { getAuthenticatedUser } from './auth.js';
 import { dispatchOrderStatusNotifications, normalizePhone, maskPhone } from '../lib/notifications.js';
 import { createRazorpayGatewayOrder, getRazorpayKeyId } from '../lib/razorpay.js';
+import { cancelOrderWithRefund } from '../lib/cancellation.js';
 
 type CartWithItems = Prisma.CartGetPayload<{
   include: {
@@ -498,10 +499,12 @@ checkoutRouter.get('/orders/:orderNo', async (req: Request, res: Response) => {
                 name: true,
               },
             },
+            returns: true,
           },
         },
         delivery: true,
         payments: true,
+        refunds: true,
         invoice: {
           include: {
             credit_notes: true,
@@ -556,6 +559,75 @@ checkoutRouter.get('/orders/:orderNo', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching order:', error);
     res.status(500).json({ error: 'Failed to fetch order' });
+  }
+});
+
+/**
+ * POST /api/orders/:orderNo/cancel
+ * Customer cancellation endpoint (F18).
+ * Rules:
+ * - Allowed before order is PACKED.
+ * - Customer must own the order (authenticated or matching phone).
+ * - Issues refund for online payments; COD needs no refund.
+ * - Generates credit note if invoice exists.
+ */
+checkoutRouter.post('/orders/:orderNo/cancel', async (req: Request, res: Response) => {
+  try {
+    const { orderNo } = req.params;
+    const bodyPhone = req.body?.phone as string | undefined;
+    const reason = req.body?.reason as string | undefined;
+
+    const order = await prisma.order.findUnique({
+      where: { order_no: orderNo },
+      include: {
+        user: true,
+      },
+    });
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    // Ownership verification
+    const authUser = await getAuthenticatedUser(req);
+    const orderPhone = normalizePhone(order.guest_phone || order.user?.phone || '');
+
+    let callerId = 'guest_customer';
+    if (authUser) {
+      const isOwner =
+        (order.user_id && order.user_id === authUser.id) ||
+        (orderPhone && normalizePhone(authUser.phone) === orderPhone);
+      if (!isOwner) {
+        return res.status(403).json({ error: 'You do not have permission to cancel this order.' });
+      }
+      callerId = authUser.id;
+    } else if (bodyPhone) {
+      if (normalizePhone(bodyPhone) !== orderPhone) {
+        return res.status(403).json({ error: 'Phone number does not match this order.' });
+      }
+    } else {
+      return res.status(403).json({ error: 'Authentication or phone verification required to cancel order.' });
+    }
+
+    const result = await cancelOrderWithRefund({
+      orderId: order.id,
+      actorId: callerId,
+      actorRole: 'CUSTOMER',
+      reason,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Order cancelled successfully',
+      order: result.order,
+      refund: result.refund,
+      creditNote: result.creditNote,
+      refundAmountPaise: result.refundAmountPaise,
+    });
+  } catch (error: any) {
+    console.error('Customer cancellation error:', error);
+    const statusCode = error.message?.includes('packed') ? 400 : 500;
+    res.status(statusCode).json({ error: error.message || 'Failed to cancel order' });
   }
 });
 

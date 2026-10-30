@@ -49,6 +49,14 @@ interface OrderDetailData {
       name: string;
       phone?: string;
     };
+    returns?: Array<{
+      id: string;
+      qty: number;
+      reason_code: string;
+      shop_cost_paise: number;
+      status: string;
+      created_at: string;
+    }>;
   }>;
   delivery?: {
     id: string;
@@ -63,6 +71,14 @@ interface OrderDetailData {
     email?: string | null;
   } | null;
   invoice?: InvoiceData | null;
+  refunds?: Array<{
+    id: string;
+    amount_paise: number;
+    reason: string;
+    status: string;
+    gateway_refund_id?: string | null;
+    created_at: string;
+  }>;
 }
 
 interface AuditLogEntry {
@@ -111,6 +127,13 @@ function AdminOrderDetailContent() {
   const [updating, setUpdating] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+
+  // Return state (F18)
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnSelections, setReturnSelections] = useState<Record<string, { qty: number; reasonCode: string }>>({});
+  const [returnNotes, setReturnNotes] = useState('');
+  const [processingReturn, setProcessingReturn] = useState(false);
+  const [returnError, setReturnError] = useState<string | null>(null);
 
   // 1. Verify admin session
   useEffect(() => {
@@ -197,6 +220,51 @@ function AdminOrderDetailContent() {
       setError('Network error while updating order status.');
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleProcessReturn = async () => {
+    if (!order) return;
+    setProcessingReturn(true);
+    setReturnError(null);
+    try {
+      const itemsToReturn = Object.entries(returnSelections)
+        .filter(([_, sel]) => sel.qty > 0)
+        .map(([orderItemId, sel]) => ({
+          orderItemId,
+          qty: sel.qty,
+          reasonCode: (sel.reasonCode as any) || 'damaged',
+        }));
+
+      if (itemsToReturn.length === 0) {
+        setReturnError('Please enter at least 1 item quantity to return.');
+        return;
+      }
+
+      const res = await fetch(`${API_BASE_URL}/admin/orders/${order.id}/returns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          items: itemsToReturn,
+          notes: returnNotes.trim() || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setReturnError(data.error || 'Failed to process return');
+        return;
+      }
+
+      setShowReturnModal(false);
+      setReturnSelections({});
+      setReturnNotes('');
+      await fetchOrderDetail();
+    } catch {
+      setReturnError('Network error while processing return.');
+    } finally {
+      setProcessingReturn(false);
     }
   };
 
@@ -318,10 +386,62 @@ function AdminOrderDetailContent() {
                             </button>
                           );
                         })}
+
+                        {/* Admin Cancel Button when not already in allowedTransitions and before DELIVERED per F18 */}
+                        {!order.allowedTransitions.includes('CANCELLED' as any) &&
+                          order.status !== 'DELIVERED' &&
+                          order.status !== 'CANCELLED' &&
+                          order.status !== 'RETURNED' &&
+                          order.status !== 'CLOSED' && (
+                            <button
+                              type="button"
+                              disabled={updating}
+                              onClick={() => {
+                                setShowCancelModal(true);
+                                setCancelReason('');
+                              }}
+                              className="rounded-xl px-3.5 py-2.5 text-xs font-bold transition-all min-h-[44px] flex items-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer bg-surface text-primary border border-border hover:bg-chip"
+                            >
+                              <span>✕</span>
+                              <span>Cancel Order</span>
+                            </button>
+                          )}
+
+                        {/* Process Return Action for Delivered orders per F18 */}
+                        {(order.status === 'DELIVERED' || order.status === 'RETURNED') && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowReturnModal(true);
+                              setReturnError(null);
+                              setReturnSelections({});
+                            }}
+                            className="rounded-xl px-3.5 py-2.5 text-xs font-bold transition-all min-h-[44px] flex items-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100"
+                          >
+                            <span>↩️</span>
+                            <span>Process Return</span>
+                          </button>
+                        )}
                       </div>
                     ) : (
-                      <div className="rounded-xl bg-slate-50 p-2.5 text-xs font-medium text-slate-500 border border-slate-100">
-                        🔒 Order is in terminal state ({STATUS_LABELS[order.status] || order.status}). No further transitions allowed.
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="rounded-xl bg-slate-50 p-2.5 text-xs font-medium text-slate-500 border border-slate-100">
+                          🔒 Order is in terminal state ({STATUS_LABELS[order.status] || order.status}). No further transitions allowed.
+                        </div>
+                        {(order.status === 'DELIVERED' || order.status === 'RETURNED') && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowReturnModal(true);
+                              setReturnError(null);
+                              setReturnSelections({});
+                            }}
+                            className="rounded-xl px-3.5 py-2.5 text-xs font-bold transition-all min-h-[44px] flex items-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100"
+                          >
+                            <span>↩️</span>
+                            <span>Process Return</span>
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -422,6 +542,15 @@ function AdminOrderDetailContent() {
                       <span className="text-[11px] text-slate-400">
                         {item.qty} × {formatPaise(item.selling_price_paise)}
                       </span>
+                      {item.returns && item.returns.length > 0 && (
+                        <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                          {item.returns.map((ret, rIdx) => (
+                            <span key={rIdx} className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200">
+                              ↩️ Returned: {ret.qty} ({ret.reason_code})
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <span className="font-bold text-slate-900 shrink-0 text-sm">
@@ -459,6 +588,43 @@ function AdminOrderDetailContent() {
                 </div>
               </div>
             </div>
+
+            {/* Refunds & Returns Card (F18) */}
+            {((order.refunds && order.refunds.length > 0) || order.items.some((i) => i.returns && i.returns.length > 0)) && (
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                    <span>💰</span>
+                    <span>Refunds &amp; Returns (F18)</span>
+                  </h2>
+                  {order.payment_status === 'REFUNDED' && (
+                    <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200 uppercase">
+                      Fully Refunded
+                    </span>
+                  )}
+                </div>
+
+                {order.refunds && order.refunds.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-[11px] font-bold text-slate-600 block">Gateway Refund Records:</span>
+                    {order.refunds.map((ref) => (
+                      <div key={ref.id} className="rounded-xl bg-slate-50 border border-slate-200 p-2.5 text-xs space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold text-primary">{formatPaise(ref.amount_paise)}</span>
+                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-700">
+                            {ref.status}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-600">Reason: {ref.reason}</p>
+                        {ref.gateway_refund_id && (
+                          <p className="text-[10px] text-slate-400 font-mono">Gateway ID: {ref.gateway_refund_id}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* GST Tax Invoice Card (F15) */}
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3">
@@ -782,6 +948,128 @@ function AdminOrderDetailContent() {
                 className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-primary min-h-[40px] flex items-center justify-center active:scale-95 cursor-pointer"
               >
                 {updating ? 'Cancelling...' : 'Confirm Cancellation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Process Return & Refund Modal (F18) */}
+      {showReturnModal && order && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto animate-fade-in">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                <span>↩️</span>
+                <span>Process Return &amp; Refund</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowReturnModal(false)}
+                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500">
+              Select items and quantities returned. Damaged or expired goods automatically generate a shop ledger deduction (F18/F23).
+            </p>
+
+            <div className="space-y-3">
+              {order.items.map((item) => {
+                const alreadyReturned = (item.returns || []).reduce((sum, r) => sum + r.qty, 0);
+                const maxReturnable = item.qty - alreadyReturned;
+                const currentSel = returnSelections[item.id] || { qty: 0, reasonCode: 'damaged' };
+
+                return (
+                  <div key={item.id} className="rounded-xl border border-slate-200 p-3 text-xs space-y-2 bg-slate-50/50">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-800">{item.product.name}</span>
+                      <span className="text-slate-500">({formatPaise(item.selling_price_paise)} each)</span>
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      Ordered: {item.qty} | Already returned: {alreadyReturned} | Available: {maxReturnable}
+                    </div>
+
+                    {maxReturnable > 0 ? (
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1">Return Qty</label>
+                          <input
+                            type="number"
+                            min={0}
+                            max={maxReturnable}
+                            value={currentSel.qty}
+                            onChange={(e) => {
+                              const val = Math.max(0, Math.min(maxReturnable, parseInt(e.target.value, 10) || 0));
+                              setReturnSelections({
+                                ...returnSelections,
+                                [item.id]: { ...currentSel, qty: val },
+                              });
+                            }}
+                            className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1">Reason Code</label>
+                          <select
+                            value={currentSel.reasonCode}
+                            onChange={(e) => {
+                              setReturnSelections({
+                                ...returnSelections,
+                                [item.id]: { ...currentSel, reasonCode: e.target.value },
+                              });
+                            }}
+                            className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800"
+                          >
+                            <option value="damaged">Damaged (Shop deduction)</option>
+                            <option value="expired">Expired (Shop deduction)</option>
+                            <option value="wrong_item">Wrong Item</option>
+                            <option value="customer_changed_mind">Customer Changed Mind</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-[11px] font-semibold text-slate-400 italic">Fully returned</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">Notes (Optional)</label>
+              <textarea
+                rows={2}
+                placeholder="Notes on returned item condition..."
+                value={returnNotes}
+                onChange={(e) => setReturnNotes(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 bg-white p-2 text-xs text-slate-800"
+              />
+            </div>
+
+            {returnError && (
+              <p className="text-xs text-primary font-semibold">{returnError}</p>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={processingReturn}
+                onClick={() => setShowReturnModal(false)}
+                className="rounded-xl px-3.5 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={processingReturn}
+                onClick={handleProcessReturn}
+                className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white hover:bg-primary active:scale-95"
+              >
+                {processingReturn ? 'Processing...' : 'Submit Return & Refund'}
               </button>
             </div>
           </div>
