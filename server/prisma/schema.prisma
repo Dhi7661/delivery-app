@@ -531,3 +531,14 @@ model OrderNotification {
 }
 
 
+
+model ProcessedEvent {
+  id           String   @id @default(uuid())
+  event_id     String   @unique
+  event_type   String
+  payload      Json?
+  processed_at DateTime @default(now())
+
+  @@index([event_id])
+  @@map("processed_events")
+}

@@ -13,6 +13,7 @@ import { addressRouter } from './routes/address.js';
 import { deliveryRouter } from './routes/delivery.js';
 import { invoiceRouter } from './routes/invoice.js';
 import { paymentRouter } from './routes/payment.js';
+import { reconcilePendingPayments } from './lib/reconciliation.js';
 
 dotenv.config();
 
@@ -25,7 +26,14 @@ app.use(cors({
 }));
 
 app.use(cookieParser());
-app.use(express.json({ limit: '10mb' }));
+app.use(
+  express.json({
+    limit: '10mb',
+    verify: (req: any, _res: any, buf: Buffer) => {
+      req.rawBody = buf;
+    },
+  })
+);
 
 // API routes
 app.use('/api', catalogRouter);
@@ -74,6 +82,19 @@ if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     console.log(`[${BRAND_NAME} Backend] Server running on port ${PORT}`);
     console.log(`[${BRAND_NAME} Backend] Health check available at http://localhost:${PORT}/api/v1/health`);
+
+    // F17: Periodic payment reconciliation job every 5 minutes
+    const RECONCILIATION_INTERVAL_MS = 5 * 60 * 1000;
+    setInterval(async () => {
+      try {
+        const summary = await reconcilePendingPayments({ olderThanMinutes: 10 });
+        if (summary.checked > 0) {
+          console.log('[Reconciliation] Swept pending payments:', summary);
+        }
+      } catch (err: any) {
+        console.error('[Reconciliation] Periodic job error:', err.message);
+      }
+    }, RECONCILIATION_INTERVAL_MS);
   });
 }
 
