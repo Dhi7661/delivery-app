@@ -1,5 +1,7 @@
 'use client';
 
+import Footer from '@/components/ui/Footer';
+
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Header from '@/components/ui/Header';
@@ -158,6 +160,7 @@ export default function OrdersPage() {
             </div>
           </div>
         )}
+        <Footer />
       </main>
 
       <CartBar />

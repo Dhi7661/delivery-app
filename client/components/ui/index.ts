@@ -49,3 +49,5 @@ export type { StatusTimelineProps } from './StatusTimeline';
 
 export { default as SettingRow } from './SettingRow';
 export type { SettingRowProps } from './SettingRow';
+
+export { default as Footer } from './Footer';

@@ -1,5 +1,7 @@
 'use client';
 
+import Footer from '@/components/ui/Footer';
+
 import React from 'react';
 import Link from 'next/link';
 import Header from '@/components/ui/Header';
@@ -247,6 +249,7 @@ export default function CartPage() {
             </div>
           </div>
         )}
+        <Footer />
       </main>
 
       {/* Sticky Fixed Bottom Checkout Bar above BottomNav matching cart.png */}
