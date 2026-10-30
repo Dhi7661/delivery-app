@@ -1,14 +1,23 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/db.js';
+import { catalogCache } from '../lib/catalogCache.js';
 
 export const catalogRouter = Router();
 
 /**
  * GET /api/categories
  * Returns all active categories sorted by sort_order.
+ * Cached for 1 to 5 minutes (F20 performance).
  */
 catalogRouter.get('/categories', async (_req: Request, res: Response) => {
   try {
+    const cacheKey = 'categories';
+    const cached = catalogCache.get<{ categories: any[] }>(cacheKey);
+    if (cached) {
+      res.setHeader('X-Cache', 'HIT');
+      return res.status(200).json(cached);
+    }
+
     const categories = await prisma.category.findMany({
       where: { is_active: true },
       select: {
@@ -19,7 +28,10 @@ catalogRouter.get('/categories', async (_req: Request, res: Response) => {
       orderBy: { sort_order: 'asc' },
     });
 
-    res.status(200).json({ categories });
+    const responseData = { categories };
+    catalogCache.set(cacheKey, responseData);
+    res.setHeader('X-Cache', 'MISS');
+    res.status(200).json(responseData);
   } catch (error) {
     console.error('Error fetching categories:', error);
     res.status(500).json({ error: 'Failed to fetch categories' });
@@ -34,6 +46,7 @@ catalogRouter.get('/categories', async (_req: Request, res: Response) => {
  * - Default limit 20, capped at 50
  * - Sorted by name ascending
  * - Cursor-based pagination
+ * - Cached for 1 to 5 minutes (F20 performance)
  */
 catalogRouter.get('/categories/:id/products', async (req: Request, res: Response) => {
   try {
@@ -41,6 +54,13 @@ catalogRouter.get('/categories/:id/products', async (req: Request, res: Response
     const cursor = typeof req.query.cursor === 'string' ? req.query.cursor : undefined;
     const rawLimit = Number(req.query.limit);
     const limit = Math.min(Number.isInteger(rawLimit) && rawLimit > 0 ? rawLimit : 20, 50);
+
+    const cacheKey = `category_products:${categoryId}:${limit}:${cursor || 'root'}`;
+    const cached = catalogCache.get<any>(cacheKey);
+    if (cached) {
+      res.setHeader('X-Cache', 'HIT');
+      return res.status(200).json(cached);
+    }
 
     // Verify category exists
     const category = await prisma.category.findFirst({
@@ -79,11 +99,15 @@ catalogRouter.get('/categories/:id/products', async (req: Request, res: Response
     const paginatedProducts = hasNextPage ? products.slice(0, limit) : products;
     const nextCursor = hasNextPage ? paginatedProducts[paginatedProducts.length - 1]?.id : null;
 
-    res.status(200).json({
+    const responseData = {
       category: { id: category.id, name: category.name },
       products: paginatedProducts,
       nextCursor,
-    });
+    };
+
+    catalogCache.set(cacheKey, responseData);
+    res.setHeader('X-Cache', 'MISS');
+    res.status(200).json(responseData);
   } catch (error) {
     console.error('Error fetching category products:', error);
     res.status(500).json({ error: 'Failed to fetch products' });
@@ -142,9 +166,17 @@ catalogRouter.get('/products/search', async (req: Request, res: Response) => {
  * Single product detail with shop name.
  * Rules:
  * - Inactive product returns 404
+ * - Cached for 1 to 5 minutes (F20 performance)
  */
 catalogRouter.get('/products/:id', async (req: Request, res: Response) => {
   try {
+    const cacheKey = `product:${req.params.id}`;
+    const cached = catalogCache.get<any>(cacheKey);
+    if (cached) {
+      res.setHeader('X-Cache', 'HIT');
+      return res.status(200).json(cached);
+    }
+
     const product = await prisma.product.findUnique({
       where: { id: req.params.id },
       select: {
@@ -177,7 +209,10 @@ catalogRouter.get('/products/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Product not found or inactive.' });
     }
 
-    res.status(200).json({ product });
+    const responseData = { product };
+    catalogCache.set(cacheKey, responseData);
+    res.setHeader('X-Cache', 'MISS');
+    res.status(200).json(responseData);
   } catch (error) {
     console.error('Error fetching product:', error);
     res.status(500).json({ error: 'Failed to fetch product' });

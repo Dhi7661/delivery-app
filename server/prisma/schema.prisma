@@ -231,6 +231,7 @@ model Product {
 
   @@unique([shop_id, name, unit_size])
   @@index([shop_id, is_available])
+  @@index([category_id, is_available])
   @@map("products")
 }
 
@@ -304,6 +305,7 @@ model OrderItem {
   returns             Return[]
   ledger_entries      ShopLedger[]
 
+  @@index([order_id])
   @@map("order_items")
 }
 
@@ -334,6 +336,7 @@ model Refund {
 
   order             Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
 
+  @@index([order_id])
   @@map("refunds")
 }
 
@@ -466,6 +469,8 @@ model AuditLog {
   new_value  Json?
   created_at DateTime @default(now())
 
+  @@index([entity, entity_id])
+  @@index([actor_id])
   @@map("audit_logs")
 }
 

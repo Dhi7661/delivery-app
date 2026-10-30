@@ -1,5 +1,5 @@
 import process from 'node:process';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../src/lib/db.js';
 import bcrypt from 'bcryptjs';
 import {
   DUMMY_SHOPS,
@@ -8,7 +8,6 @@ import {
   type DummyProduct,
 } from './seedData.js';
 
-const prisma = new PrismaClient();
 
 export const INITIAL_SETTINGS = [
   {
