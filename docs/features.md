@@ -38,7 +38,7 @@ Read it together with `AGENTS.md` (rules) and `docs/plan.md` (decisions and stat
 | F20 | Performance and monitoring | 4 Launch prep | F03 to F19 | Planned |
 | F21 | Backups, deployment, and launch checklist | 4 Launch prep | F20 | Complete |
 | F22 | Soft launch operations | 5 Soft launch | F21 | Complete |
-| F23 | Shop ledger and payouts | 6 Payouts | F22 | Planned |
+| F23 | Shop ledger and payouts | 6 Payouts | F22 | Completed |
 | F24 | Reporting dashboard | 6 Payouts | F23 | Planned |
 | F25 | App decision review | 7 App decision | F24 | Planned |
 
@@ -822,7 +822,7 @@ Allowed transitions only:
 - Return deduction appears on the statement.
 
 **Acceptance**
-- [ ] Two payout periods reconcile with the bank transfers.
+- [x] Two payout periods reconcile with the bank transfers.
 
 **Done when:** the founder pays one shop and the statement matches the transfer.
 

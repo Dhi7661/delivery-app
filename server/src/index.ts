@@ -16,6 +16,7 @@ import { invoiceRouter } from './routes/invoice.js';
 import { paymentRouter } from './routes/payment.js';
 import { monitoringRouter, isSimulatedOutage } from './routes/monitoring.js';
 import { operationsRouter } from './routes/operations.js';
+import { payoutsRouter } from './routes/payouts.js';
 import { reconcilePendingPayments } from './lib/reconciliation.js';
 import { errorTracker } from './lib/errorTracker.js';
 import {
@@ -101,6 +102,7 @@ app.use('/api', invoiceRouter);
 app.use('/api/payments', paymentRouter);
 app.use('/api', monitoringRouter);
 app.use('/api', operationsRouter);
+app.use('/api', payoutsRouter);
 
 // API v1 Health Check with DB connectivity test and simulated downtime support (F20)
 app.get('/api/v1/health', async (_req: Request, res: Response) => {

@@ -16,6 +16,7 @@ import { generateOrderInvoice, generateCreditNote } from '../lib/invoice.js';
 import { cancelOrderWithRefund, processOrderReturn } from '../lib/cancellation.js';
 import { catalogCache } from '../lib/catalogCache.js';
 import { isOnlinePaymentsEnabled, setOnlinePaymentsEnabled } from '../lib/settings.js';
+import { recordOrderDeliveredLedger } from '../lib/ledger.js';
 
 export const adminRouter = Router();
 
@@ -765,6 +766,13 @@ adminRouter.patch('/admin/orders/:id/status', requireAdminAuth, async (req: Requ
         await generateOrderInvoice(updatedOrder.id);
       } catch (invErr) {
         console.error('[Invoice] Error generating GST invoice upon DELIVERED:', invErr);
+      }
+
+      // F23: Automatically record Shop Ledger SALE entries when DELIVERED
+      try {
+        await recordOrderDeliveredLedger(updatedOrder.id);
+      } catch (ledgerErr) {
+        console.error('[Ledger] Error recording shop ledger on DELIVERED:', ledgerErr);
       }
     }
 

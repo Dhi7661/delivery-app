@@ -5,6 +5,7 @@ import { prisma } from '../lib/db.js';
 import { requireAdminAuth } from './admin.js';
 import { dispatchOrderStatusNotifications } from '../lib/notifications.js';
 import { generateOrderInvoice } from '../lib/invoice.js';
+import { recordOrderDeliveredLedger } from '../lib/ledger.js';
 
 export const deliveryRouter = Router();
 
@@ -326,6 +327,13 @@ deliveryRouter.post('/admin/deliveries/:orderId/delivered', requireAdminAuth, as
       await generateOrderInvoice(order.id);
     } catch (invErr) {
       console.error('[Invoice] Error generating GST invoice upon DELIVERED:', invErr);
+    }
+
+    // F23: Automatically record Shop Ledger SALE entries when DELIVERED
+    try {
+      await recordOrderDeliveredLedger(order.id);
+    } catch (ledgerErr) {
+      console.error('[Ledger] Error recording shop ledger on DELIVERED:', ledgerErr);
     }
 
     res.status(200).json({

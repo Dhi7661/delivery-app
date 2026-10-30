@@ -185,6 +185,9 @@ model ShopBankRef {
   shop_id      String    @unique
   provider_ref String
   last4        String
+  bank_name    String?
+  ifsc_code    String?
+  account_name String?
   verified_at  DateTime?
 
   shop         Shop      @relation(fields: [shop_id], references: [id], onDelete: Cascade)
@@ -376,29 +379,40 @@ model ShopLedger {
   id            String          @id @default(uuid())
   shop_id       String
   order_item_id String?
+  payout_id     String?
   amount_paise  Int
   entry_type    LedgerEntryType
+  notes         String?
   created_at    DateTime        @default(now())
 
   shop          Shop            @relation(fields: [shop_id], references: [id])
   order_item    OrderItem?      @relation(fields: [order_item_id], references: [id])
+  payout        Payout?         @relation(fields: [payout_id], references: [id])
 
   @@index([shop_id, created_at])
+  @@index([payout_id])
   @@map("shop_ledger")
 }
 
 model Payout {
-  id             String    @id @default(uuid())
-  shop_id        String
-  period_start   DateTime
-  period_end     DateTime
-  amount_paise   Int
-  status         String    @default("SCHEDULED")
-  paid_at        DateTime?
-  bank_reference String?
+  id                String       @id @default(uuid())
+  shop_id           String
+  period_start      DateTime
+  period_end        DateTime
+  gross_sales_paise Int          @default(0)
+  deductions_paise  Int          @default(0)
+  amount_paise      Int
+  status            String       @default("SCHEDULED")
+  paid_at           DateTime?
+  bank_reference    String?
+  pdf_url           String?
+  created_at        DateTime     @default(now())
+  updated_at        DateTime     @updatedAt
 
-  shop           Shop      @relation(fields: [shop_id], references: [id])
+  shop              Shop         @relation(fields: [shop_id], references: [id])
+  ledger_entries    ShopLedger[]
 
+  @@index([shop_id, period_start, period_end])
   @@map("payouts")
 }
 
