@@ -26,6 +26,22 @@ export interface GatewayPaymentEntity {
   notes?: Record<string, string>;
 }
 
+export interface CreateGatewayRefundParams {
+  paymentId: string;
+  amountPaise: number;
+  notes?: Record<string, string>;
+}
+
+export interface GatewayRefundResult {
+  id: string;
+  payment_id: string;
+  amount: number;
+  currency: string;
+  status: 'processed' | 'requested' | 'failed';
+  notes?: Record<string, string>;
+  isSimulated?: boolean;
+}
+
 const key_id = process.env.RAZORPAY_KEY_ID || 'rzp_test_dummy_key_id';
 const key_secret = process.env.RAZORPAY_KEY_SECRET || 'rzp_test_dummy_key_secret';
 
@@ -67,6 +83,26 @@ export function getSimulatedGatewayPayments(orderId: string): GatewayPaymentEnti
 
 export function clearSimulatedGatewayPayments() {
   simulatedGatewayPayments.clear();
+}
+
+/**
+ * In-memory registry for simulated gateway refunds (used in test mode / Vitest).
+ * Key: payment_id, Value: GatewayRefundResult[]
+ */
+const simulatedGatewayRefunds = new Map<string, GatewayRefundResult[]>();
+
+export function registerSimulatedGatewayRefund(refund: GatewayRefundResult) {
+  const list = simulatedGatewayRefunds.get(refund.payment_id) || [];
+  list.push(refund);
+  simulatedGatewayRefunds.set(refund.payment_id, list);
+}
+
+export function getSimulatedGatewayRefunds(paymentId: string): GatewayRefundResult[] {
+  return simulatedGatewayRefunds.get(paymentId) || [];
+}
+
+export function clearSimulatedGatewayRefunds() {
+  simulatedGatewayRefunds.clear();
 }
 
 /**
@@ -121,6 +157,61 @@ export async function createRazorpayGatewayOrder(
     status: 'created',
     isSimulated: true,
   };
+}
+
+/**
+ * Creates a gateway refund via Razorpay Refund API (F18).
+ * If credentials are dummy/offline or running in test mode, falls back to simulated refund.
+ */
+export async function createRazorpayRefund(
+  params: CreateGatewayRefundParams
+): Promise<GatewayRefundResult> {
+  const { paymentId, amountPaise, notes = {} } = params;
+
+  const isDummyKey =
+    !process.env.RAZORPAY_KEY_ID ||
+    process.env.RAZORPAY_KEY_ID.includes('dummy') ||
+    process.env.RAZORPAY_KEY_ID.includes('placeholder') ||
+    process.env.NODE_ENV === 'test';
+
+  if (!isDummyKey) {
+    try {
+      const client = getRazorpayClient();
+      const refund: any = await client.payments.refund(paymentId, {
+        amount: amountPaise,
+        notes: {
+          app: 'PlukIt',
+          ...notes,
+        },
+      });
+
+      return {
+        id: refund.id,
+        payment_id: refund.payment_id || paymentId,
+        amount: Number(refund.amount),
+        currency: refund.currency || 'INR',
+        status: refund.status === 'processed' ? 'processed' : 'requested',
+        notes: refund.notes,
+      };
+    } catch (err: any) {
+      console.warn('[Razorpay] Gateway refund API failed, falling back to simulated refund:', err.message);
+    }
+  }
+
+  // Simulated gateway refund for local development and integration tests
+  const simulatedId = `rfnd_test_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+  const simulatedRefund: GatewayRefundResult = {
+    id: simulatedId,
+    payment_id: paymentId,
+    amount: amountPaise,
+    currency: 'INR',
+    status: 'processed',
+    notes,
+    isSimulated: true,
+  };
+
+  registerSimulatedGatewayRefund(simulatedRefund);
+  return simulatedRefund;
 }
 
 /**

@@ -13,6 +13,7 @@ import {
 } from '../lib/orderStatus.js';
 import { dispatchOrderStatusNotifications, retryNotification } from '../lib/notifications.js';
 import { generateOrderInvoice, generateCreditNote } from '../lib/invoice.js';
+import { cancelOrderWithRefund, processOrderReturn } from '../lib/cancellation.js';
 
 export const adminRouter = Router();
 
@@ -555,10 +556,13 @@ adminRouter.get('/admin/orders/:id', requireAdminAuth, async (req: Request, res:
           include: {
             product: true,
             shop: true,
+            returns: true,
           },
         },
         delivery: true,
         user: true,
+        payments: true,
+        refunds: true,
         invoice: {
           include: {
             credit_notes: true,
@@ -635,8 +639,15 @@ adminRouter.patch('/admin/orders/:id/status', requireAdminAuth, async (req: Requ
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    // 2. State Machine Validation
-    if (!isValidStatusTransition(order.status, targetStatus)) {
+    // 2. State Machine Validation (Admin can cancel at any stage before DELIVERED per F18)
+    const isCancelBeforeDelivered =
+      targetStatus === 'CANCELLED' &&
+      order.status !== 'DELIVERED' &&
+      order.status !== 'CANCELLED' &&
+      order.status !== 'RETURNED' &&
+      order.status !== 'CLOSED';
+
+    if (!isCancelBeforeDelivered && !isValidStatusTransition(order.status, targetStatus)) {
       return res.status(400).json({
         error: `Invalid status transition from ${order.status} to ${targetStatus}`,
         currentStatus: order.status,
@@ -645,13 +656,31 @@ adminRouter.patch('/admin/orders/:id/status', requireAdminAuth, async (req: Requ
       });
     }
 
-    // 3. Reason requirement for cancellation after packed / delivery fail
-    if (requiresCancellationReason(order.status, targetStatus)) {
+    // 3. Admin Cancellation with automated refund and credit note (F18)
+    if (targetStatus === 'CANCELLED') {
       if (!reason || reason.trim().length === 0) {
         return res.status(400).json({
           error: `A cancellation reason is required when cancelling an order in status ${order.status}`,
         });
       }
+
+      const result = await cancelOrderWithRefund({
+        orderId: order.id,
+        actorId: adminUser?.id || 'admin',
+        actorRole: 'ADMIN',
+        reason,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: `Order ${order.order_no} status updated to CANCELLED`,
+        order: {
+          ...result.order,
+          allowedTransitions: getNextAllowedStatuses(result.order.status),
+        },
+        refund: result.refund,
+        creditNote: result.creditNote,
+      });
     }
 
     // 4. Update in database transaction with audit log
@@ -757,6 +786,81 @@ adminRouter.patch('/admin/orders/:id/status', requireAdminAuth, async (req: Requ
   } catch (error: any) {
     console.error('Error updating order status:', error);
     res.status(500).json({ error: error.message || 'Failed to update order status' });
+  }
+});
+
+/**
+ * POST /api/admin/orders/:id/cancel
+ * Admin cancellation endpoint with mandatory reason (F18).
+ * Allowed at any stage before DELIVERED.
+ */
+adminRouter.post('/admin/orders/:id/cancel', requireAdminAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const adminUser = (req as any).adminUser;
+
+    if (!reason || typeof reason !== 'string' || reason.trim().length === 0) {
+      return res.status(400).json({ error: 'A cancellation reason is required.' });
+    }
+
+    const result = await cancelOrderWithRefund({
+      orderId: id,
+      actorId: adminUser?.id || 'admin',
+      actorRole: 'ADMIN',
+      reason,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Order ${result.order.order_no} cancelled successfully`,
+      order: result.order,
+      refund: result.refund,
+      creditNote: result.creditNote,
+      refundAmountPaise: result.refundAmountPaise,
+    });
+  } catch (error: any) {
+    console.error('Admin order cancellation error:', error);
+    return res.status(400).json({ error: error.message || 'Failed to cancel order' });
+  }
+});
+
+/**
+ * POST /api/admin/orders/:id/returns
+ * Admin return and partial refund processing endpoint (F18).
+ * Processes item return, creates ShopLedger deduction for damaged/expired items,
+ * and issues gateway refund and credit note.
+ */
+adminRouter.post('/admin/orders/:id/returns', requireAdminAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { items, notes } = req.body;
+    const adminUser = (req as any).adminUser;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'At least one item must be specified for return.' });
+    }
+
+    const result = await processOrderReturn({
+      orderId: id,
+      actorId: adminUser?.id || 'admin',
+      items,
+      notes,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Return processed successfully',
+      order: result.order,
+      returns: result.returns,
+      refund: result.refund,
+      creditNote: result.creditNote,
+      refundAmountPaise: result.refundAmountPaise,
+      totalReturnPaise: result.totalReturnPaise,
+    });
+  } catch (error: any) {
+    console.error('Admin order return error:', error);
+    return res.status(400).json({ error: error.message || 'Failed to process return' });
   }
 });
 

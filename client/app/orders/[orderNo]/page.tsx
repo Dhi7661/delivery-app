@@ -43,6 +43,12 @@ function OrderTrackingContent() {
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // Cancellation state (F18)
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
   // Load phone from sessionStorage if available
   useEffect(() => {
     if (!initialPhoneQuery && typeof window !== 'undefined') {
@@ -122,6 +128,37 @@ function OrderTrackingContent() {
     navigator.clipboard?.writeText(order.order_no);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCustomerCancel = async () => {
+    if (!order) return;
+    setCancelling(true);
+    setCancelError(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/orders/${order.order_no}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          phone: inputPhone.trim() || undefined,
+          reason: cancelReason.trim() || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setCancelError(data.error || 'Failed to cancel order.');
+        return;
+      }
+
+      setShowCancelModal(false);
+      setCancelReason('');
+      await fetchTracking();
+    } catch {
+      setCancelError('Network error while requesting cancellation.');
+    } finally {
+      setCancelling(false);
+    }
   };
 
   return (
@@ -507,6 +544,133 @@ function OrderTrackingContent() {
                     </Link>
                   )}
                 </div>
+
+                {/* 6. F18: Cancellation & Refund Status Card */}
+                {order.status === 'CANCELLED' && (
+                  <div className="rounded-[20px] border border-border bg-card p-4 shadow-2xs space-y-3">
+                    <div className="flex items-center justify-between border-b border-border/40 pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full bg-primary" />
+                        <span className="text-xs font-extrabold text-heading">Order Cancelled</span>
+                      </div>
+                      <span className="rounded-full bg-chip px-2.5 py-0.5 text-[10px] font-bold text-primary uppercase">
+                        {order.payment_status === 'REFUNDED' ? 'Refund Processed' : 'Cancelled'}
+                      </span>
+                    </div>
+
+                    {order.refunds && order.refunds.length > 0 && (
+                      <div className="rounded-[14px] bg-surface p-3 border border-border/50 text-xs space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-heading">Refunded Amount:</span>
+                          <span className="font-extrabold text-primary">
+                            {formatPaise(order.refunds.reduce((sum, r) => sum + r.amount_paise, 0))}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] text-muted">
+                          <span>Status:</span>
+                          <span className="font-bold text-heading uppercase">{order.refunds[0].status}</span>
+                        </div>
+                        {order.refunds[0].gateway_refund_id && (
+                          <div className="flex items-center justify-between text-[11px] text-muted">
+                            <span>Gateway Refund ID:</span>
+                            <span className="font-mono text-heading font-semibold">{order.refunds[0].gateway_refund_id}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {order.invoice?.credit_notes && order.invoice.credit_notes.length > 0 && (
+                      <div className="pt-2 flex items-center justify-between text-xs">
+                        <span className="font-bold text-heading">Credit Note:</span>
+                        <a
+                          href={`${API_BASE_URL}/credit-notes/${order.invoice.credit_notes[0].credit_note_no}/pdf`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-bold text-primary hover:underline text-[11px]"
+                        >
+                          Download {order.invoice.credit_notes[0].credit_note_no} &rarr;
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 7. Customer Cancellation Button (allowed before PACKED per F18) */}
+                {['PLACED', 'PAYMENT_PENDING', 'CONFIRMED', 'SENT_TO_SHOP'].includes(order.status) && (
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCancelModal(true);
+                        setCancelError(null);
+                        setCancelReason('');
+                      }}
+                      className="w-full flex min-h-[44px] items-center justify-center rounded-[14px] border border-border bg-surface px-4 text-xs font-bold text-primary hover:bg-chip active:scale-98 transition-all"
+                    >
+                      Cancel Order
+                    </button>
+                  </div>
+                )}
+
+                {/* 8. Notice when already packed */}
+                {['PACKED', 'OUT_FOR_DELIVERY'].includes(order.status) && (
+                  <div className="rounded-[14px] bg-surface p-3 border border-border/50 text-[11px] text-muted text-center font-medium">
+                    Order is packed and in transit. Customer cancellation is no longer available.
+                  </div>
+                )}
+
+                {/* Cancel Confirmation Modal */}
+                {showCancelModal && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
+                    <div className="w-full max-w-sm rounded-[24px] border border-border bg-card p-5 shadow-xl space-y-4">
+                      <div className="flex items-center gap-2 text-heading">
+                        <span className="text-lg">✕</span>
+                        <h3 className="text-sm font-black">Cancel This Order?</h3>
+                      </div>
+                      <p className="text-xs text-muted leading-relaxed">
+                        Are you sure you want to cancel your order? If you paid online via UPI, your refund will be automatically processed back to your original payment method.
+                      </p>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold text-heading">
+                          Reason (Optional)
+                        </label>
+                        <textarea
+                          rows={2}
+                          placeholder="Reason for cancellation..."
+                          value={cancelReason}
+                          onChange={(e) => setCancelReason(e.target.value)}
+                          className="w-full rounded-[12px] border border-border bg-surface px-3 py-2 text-xs text-text placeholder-muted focus:border-primary focus:outline-hidden"
+                        />
+                      </div>
+
+                      {cancelError && (
+                        <p className="text-[11px] font-semibold text-primary">
+                          {cancelError}
+                        </p>
+                      )}
+
+                      <div className="flex items-center justify-end gap-2 pt-2">
+                        <button
+                          type="button"
+                          disabled={cancelling}
+                          onClick={() => setShowCancelModal(false)}
+                          className="flex min-h-[40px] items-center justify-center rounded-[12px] px-3.5 text-xs font-bold text-muted hover:bg-surface active:bg-chip transition-colors"
+                        >
+                          Keep Order
+                        </button>
+                        <button
+                          type="button"
+                          disabled={cancelling}
+                          onClick={handleCustomerCancel}
+                          className="flex min-h-[40px] items-center justify-center rounded-[12px] bg-primary px-4 text-xs font-bold text-white shadow-2xs hover:bg-primary active:scale-95 transition-all"
+                        >
+                          {cancelling ? 'Cancelling...' : 'Yes, Cancel Order'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>

@@ -60,6 +60,26 @@ export interface CartData {
   total_paise: number;
 }
 
+export interface ReturnData {
+  id: string;
+  order_item_id: string;
+  qty: number;
+  reason_code: string;
+  shop_cost_paise: number;
+  status: string;
+  created_at: string;
+}
+
+export interface RefundData {
+  id: string;
+  order_id: string;
+  amount_paise: number;
+  reason: string;
+  status: string;
+  gateway_refund_id?: string | null;
+  created_at: string;
+}
+
 export interface OrderItemData {
   id: string;
   order_id: string;
@@ -79,6 +99,7 @@ export interface OrderItemData {
     id: string;
     name: string;
   };
+  returns?: ReturnData[];
 }
 
 export interface DeliveryData {
@@ -155,6 +176,7 @@ export interface OrderData {
   items: OrderItemData[];
   delivery?: DeliveryData | null;
   invoice?: InvoiceData | null;
+  refunds?: RefundData[];
 }
 
 export interface UserData {
