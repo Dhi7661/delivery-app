@@ -212,14 +212,36 @@ export async function generate15DayPayout(params: {
  */
 export async function recordPayoutTransfer(params: {
   payoutId: string;
-  bankReference: string;
+  paymentMode?: 'UPI' | 'CASH' | 'BANK';
+  bankReference?: string;
+  upiRef?: string;
+  cashNote?: string;
   paidAt?: Date;
   adminId?: string;
 }) {
-  const { payoutId, bankReference, paidAt, adminId } = params;
+  const { payoutId, paymentMode = 'BANK', bankReference, upiRef, cashNote, paidAt, adminId } = params;
 
-  if (!bankReference || bankReference.trim().length < 4) {
-    throw new Error('Valid bank transfer reference (UTR / IMPS / NEFT) is required.');
+  let finalBankRef: string | null = null;
+  let finalUpiRef: string | null = null;
+  let finalCashNote: string | null = null;
+
+  if (paymentMode === 'UPI') {
+    const ref = upiRef || bankReference;
+    if (!ref || ref.trim().length === 0) {
+      throw new Error('UPI transaction reference (12 digits) is required for UPI payout.');
+    }
+    finalUpiRef = ref.trim();
+  } else if (paymentMode === 'CASH') {
+    const note = cashNote || bankReference;
+    if (!note || note.trim().length < 5) {
+      throw new Error('Handover note (date, amount, and recipient name) is required for Cash payout.');
+    }
+    finalCashNote = note.trim();
+  } else {
+    if (!bankReference || bankReference.trim().length < 4) {
+      throw new Error('Valid bank transfer reference (UTR / IMPS / NEFT) is required for Bank payout.');
+    }
+    finalBankRef = bankReference.trim();
   }
 
   const payout = await prisma.payout.findUnique({
@@ -241,7 +263,10 @@ export async function recordPayoutTransfer(params: {
     where: { id: payoutId },
     data: {
       status: 'PAID',
-      bank_reference: bankReference.trim(),
+      payment_mode: paymentMode,
+      bank_reference: finalBankRef,
+      upi_ref: finalUpiRef,
+      cash_note: finalCashNote,
       paid_at: transferDate,
     },
   });
@@ -255,7 +280,10 @@ export async function recordPayoutTransfer(params: {
       new_value: {
         shopName: payout.shop.name,
         amountPaise: payout.amount_paise,
-        bankReference: bankReference.trim(),
+        paymentMode,
+        bankReference: finalBankRef,
+        upiRef: finalUpiRef,
+        cashNote: finalCashNote,
         paidAt: transferDate,
       },
     },

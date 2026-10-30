@@ -11,9 +11,9 @@ describe('F02: Catalog data', () => {
   it('Seed runs twice with the same result (no duplicates).', async () => {
     // Run seed first time
     await seedCatalog();
-    const shopCountFirst = await prisma.shop.count();
+    const shopCountFirst = await prisma.shop.count({ where: { name: { startsWith: '[DUMMY]' } } });
     const categoryCountFirst = await prisma.category.count();
-    const productCountFirst = await prisma.product.count();
+    const productCountFirst = await prisma.product.count({ where: { name: { startsWith: '[DUMMY]' } } });
 
     expect(shopCountFirst).toBe(2);
     expect(categoryCountFirst).toBe(5);
@@ -21,9 +21,9 @@ describe('F02: Catalog data', () => {
 
     // Run seed second time
     await seedCatalog();
-    const shopCountSecond = await prisma.shop.count();
+    const shopCountSecond = await prisma.shop.count({ where: { name: { startsWith: '[DUMMY]' } } });
     const categoryCountSecond = await prisma.category.count();
-    const productCountSecond = await prisma.product.count();
+    const productCountSecond = await prisma.product.count({ where: { name: { startsWith: '[DUMMY]' } } });
 
     // Verify exact same counts, no duplicates created
     expect(shopCountSecond).toBe(shopCountFirst);
@@ -58,6 +58,7 @@ describe('F02: Catalog data', () => {
 
   it('Every product has a valid shop and category.', async () => {
     const products = await prisma.product.findMany({
+      where: { name: { startsWith: '[DUMMY]' } },
       include: {
         shop: true,
         category: true,

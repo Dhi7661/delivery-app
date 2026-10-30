@@ -105,6 +105,39 @@ export default function AdminDeliveriesPage() {
   const [failedReason, setFailedReason] = useState<string>('no answer');
   const [failedNote, setFailedNote] = useState('');
   const [submittingFailed, setSubmittingFailed] = useState(false);
+  const [handovers, setHandovers] = useState<any[]>([]);
+  const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
+
+
+  const fetchHandovers = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/cash-handovers`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setHandovers(data.handovers || []);
+      }
+    } catch (err) {
+      console.error('Error fetching handovers:', err);
+    }
+  }, []);
+
+  const handleAcknowledgeHandover = async (id: string) => {
+    setAcknowledgingId(id);
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/cash-handovers/${id}/acknowledge`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (res.ok) {
+        await fetchHandovers();
+        await fetchDeliveries();
+      }
+    } catch (err) {
+      console.error('Error acknowledging handover:', err);
+    } finally {
+      setAcknowledgingId(null);
+    }
+  };
 
   // 1. Check admin authentication
   useEffect(() => {
@@ -158,7 +191,8 @@ export default function AdminDeliveriesPage() {
 
   useEffect(() => {
     fetchDeliveries();
-  }, [fetchDeliveries]);
+    fetchHandovers();
+  }, [fetchDeliveries, fetchHandovers]);
 
   // 3. Action: Start Delivery (PACKED -> OUT_FOR_DELIVERY)
   const handleStartDelivery = async (orderId: string) => {
@@ -234,6 +268,7 @@ export default function AdminDeliveriesPage() {
 
       setCashModalOrder(null);
       await fetchDeliveries();
+      await fetchHandovers();
     } catch (err) {
       console.error('Error delivering order:', err);
       setActionError('Network error while submitting delivery status');
@@ -410,6 +445,73 @@ export default function AdminDeliveriesPage() {
         </div>
 
         {/* Global Error Banner */}
+        
+        {/* Spec Section 7.4: Daily Cash Handover Acknowledgment */}
+        {handovers.length > 0 && (
+          <div className="rounded-2xl border border-amber-300 bg-amber-50/70 p-3.5 space-y-2.5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
+                <span>🤝</span> Rider Cash Handovers
+              </span>
+              <span className="text-[10px] font-bold text-amber-800 bg-amber-200/60 px-2 py-0.5 rounded-full">
+                Spec §7.4
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              {handovers.map((h: any) => {
+                const isPending = !h.admin_confirmed_at;
+                return (
+                  <div
+                    key={h.id}
+                    className="bg-white rounded-xl border border-amber-200/80 p-2.5 flex items-center justify-between gap-2 shadow-2xs"
+                  >
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-extrabold text-[#50240A]">
+                          {h.rider?.name || 'Rider'}
+                        </span>
+                        <span className="text-[10px] text-gray-500 font-mono">
+                          ({h.rider?.phone})
+                        </span>
+                      </div>
+                      <div className="text-xs font-black text-emerald-700 mt-0.5">
+                        Handing Over: ₹{(h.actual_amount_paise / 100).toFixed(0)}
+                        {h.expected_amount_paise !== h.actual_amount_paise && (
+                          <span className="text-[10px] text-red-600 font-normal ml-1">
+                            (Expected: ₹{(h.expected_amount_paise / 100).toFixed(0)})
+                          </span>
+                        )}
+                      </div>
+                      {h.difference_note && (
+                        <p className="text-[10px] text-gray-600 italic mt-0.5">
+                          Note: {h.difference_note}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      {isPending ? (
+                        <button
+                          onClick={() => handleAcknowledgeHandover(h.id)}
+                          disabled={acknowledgingId === h.id}
+                          className="px-3 py-2 min-h-[44px] bg-[#6B3A1E] hover:bg-[#50240A] text-white font-extrabold text-xs rounded-xl shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
+                        >
+                          {acknowledgingId === h.id ? 'Saving...' : 'Acknowledge Receipt'}
+                        </button>
+                      ) : (
+                        <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase rounded-lg">
+                          ✓ Acknowledged
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {actionError && (
           <div className="rounded-xl border border-border bg-surface p-3 text-xs text-heading flex items-start gap-2 animate-fade-in">
             <span className="text-primary font-bold">⚠️</span>

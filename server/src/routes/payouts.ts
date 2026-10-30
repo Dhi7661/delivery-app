@@ -21,7 +21,10 @@ const GeneratePayoutSchema = z.object({
 });
 
 const RecordPaymentSchema = z.object({
-  bankReference: z.string().min(4, 'Bank transfer reference must be at least 4 characters'),
+  paymentMode: z.enum(['UPI', 'CASH', 'BANK']).default('BANK'),
+  bankReference: z.string().optional(),
+  upiRef: z.string().optional(),
+  cashNote: z.string().optional(),
   paidAt: z.string().optional().refine((val) => !val || !isNaN(Date.parse(val)), { message: 'Invalid date' }),
 });
 
@@ -275,12 +278,15 @@ payoutsRouter.post('/admin/payouts/:id/pay', requireAdminAuth, async (req: Reque
       return res.status(400).json({ error: parseResult.error.errors[0]?.message });
     }
 
-    const { bankReference, paidAt } = parseResult.data;
+    const { paymentMode, bankReference, upiRef, cashNote, paidAt } = parseResult.data;
     const adminUser = (req as any).adminUser;
 
     const payout = await recordPayoutTransfer({
       payoutId: id,
+      paymentMode,
       bankReference,
+      upiRef,
+      cashNote,
       paidAt: paidAt ? new Date(paidAt) : undefined,
       adminId: adminUser?.id,
     });
@@ -375,6 +381,67 @@ payoutsRouter.post('/admin/payouts/shops/:shopId/bank', requireAdminAuth, async 
   } catch (error: any) {
     console.error('Error updating shop bank details:', error);
     res.status(400).json({ error: error.message || 'Failed to update bank details' });
+  }
+});
+
+/**
+ * GET /api/admin/payouts/export/csv
+ * Spec Section 9.5: CSV export with payment mode and reference for each payout.
+ */
+payoutsRouter.get('/admin/payouts/export/csv', requireAdminAuth, async (req: Request, res: Response) => {
+  try {
+    const { shopId } = req.query;
+
+    const payouts = await prisma.payout.findMany({
+      where: typeof shopId === 'string' && shopId ? { shop_id: shopId } : {},
+      include: { shop: true },
+      orderBy: { created_at: 'desc' },
+    });
+
+    const headers = [
+      'Payout ID',
+      'Shop Name',
+      'GSTIN',
+      'Period Start',
+      'Period End',
+      'Gross Sales (INR)',
+      'Returns Deducted (INR)',
+      'Net Payable (INR)',
+      'Status',
+      'Payment Mode',
+      'Reference / Notes',
+      'Paid Date',
+    ];
+
+    const rows = payouts.map((p) => {
+      let ref = p.bank_reference || '';
+      if (p.payment_mode === 'UPI') ref = p.upi_ref || '';
+      if (p.payment_mode === 'CASH') ref = p.cash_note || '';
+
+      return [
+        `"${p.id}"`,
+        `"${p.shop.name}"`,
+        `"${p.shop.gstin || 'N/A'}"`,
+        p.period_start.toISOString().split('T')[0],
+        p.period_end.toISOString().split('T')[0],
+        (p.gross_sales_paise / 100).toFixed(2),
+        (p.deductions_paise / 100).toFixed(2),
+        (p.amount_paise / 100).toFixed(2),
+        p.status,
+        p.payment_mode,
+        `"${ref.replace(/"/g, '""')}"`,
+        p.paid_at ? p.paid_at.toISOString().split('T')[0] : 'UNPAID',
+      ].join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="plukit_payouts_export.csv"');
+    res.status(200).send(csvContent);
+  } catch (error: any) {
+    console.error('Error exporting payouts CSV:', error);
+    res.status(500).json({ error: error.message || 'Failed to export payouts CSV' });
   }
 });
 

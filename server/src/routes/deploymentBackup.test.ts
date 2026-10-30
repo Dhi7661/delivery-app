@@ -80,12 +80,12 @@ describe('F21: Backups, Deployment, and Launch Checklist', () => {
     activeProductId = product.id;
 
     // Ensure online payments are initially enabled
-    await setOnlinePaymentsEnabled(true, 'Test setup initialization');
+    await setOnlinePaymentsEnabled(true);
   });
 
   afterAll(async () => {
     // Restore default state
-    await setOnlinePaymentsEnabled(true, 'Test teardown reset');
+    await setOnlinePaymentsEnabled(true);
     if (server) {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }

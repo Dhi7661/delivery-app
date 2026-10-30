@@ -245,6 +245,13 @@ describe('F12: Admin Order Board & Status Transition API (Integration Tests)', (
     expect(step1.order.status).toBe('CONFIRMED');
     expect(step1.order.allowedTransitions).toEqual(['SENT_TO_SHOP', 'CANCELLED']);
 
+    // 2. Confirm COD with customer (Spec Section 4)
+    await fetch(`${BASE_URL}/api/admin/orders/${testOrderId}/confirm-customer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: `${ADMIN_COOKIE_NAME}=${adminToken}` },
+      body: JSON.stringify({ method: 'PHONE' }),
+    });
+
     // 2. CONFIRMED -> SENT_TO_SHOP
     const step2Res = await fetch(`${BASE_URL}/api/admin/orders/${testOrderId}/status`, {
       method: 'PATCH',
@@ -313,11 +320,16 @@ describe('F12: Admin Order Board & Status Transition API (Integration Tests)', (
 
     // Verify Audit Logs count and content
     const logs = await prisma.auditLog.findMany({
-      where: { entity: 'orders', entity_id: testOrderId },
+      where: { entity: 'orders', entity_id: testOrderId, action: 'ORDER_STATUS_UPDATE' },
       orderBy: { created_at: 'asc' },
     });
 
     expect(logs.length).toBe(6);
+
+    const codLog = await prisma.auditLog.findFirst({
+      where: { entity: 'orders', entity_id: testOrderId, action: 'CUSTOMER_COD_CONFIRMED' },
+    });
+    expect(codLog).toBeDefined();
     expect(logs[0].action).toBe('ORDER_STATUS_UPDATE');
     expect((logs[0].old_value as any).status).toBe('PLACED');
     expect((logs[0].new_value as any).status).toBe('CONFIRMED');

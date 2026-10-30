@@ -31,6 +31,8 @@ interface AdminOrderSummary {
   payment_method: string;
   payment_status: string;
   created_at: string;
+  confirmed_with_customer_at?: string | null;
+  customer_confirmation_method?: string | null;
   allowedTransitions: OrderStatus[];
   items: Array<{
     id: string;
@@ -367,6 +369,19 @@ export default function AdminOrdersPage() {
                         >
                           {STATUS_LABELS[order.status] || order.status}
                         </span>
+                        {order.payment_method === 'COD' && (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                              order.confirmed_with_customer_at
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-amber-100 text-amber-800 animate-pulse'
+                            }`}
+                          >
+                            {order.confirmed_with_customer_at
+                              ? `✓ COD ${order.customer_confirmation_method || 'Confirmed'}`
+                              : '⚠ COD Unconfirmed'}
+                          </span>
+                        )}
                       </div>
                       <span className="text-[11px] text-slate-400 block mt-0.5">
                         {new Date(order.created_at).toLocaleString('en-IN', {

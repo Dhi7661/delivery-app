@@ -17,6 +17,9 @@ import { paymentRouter } from './routes/payment.js';
 import { monitoringRouter, isSimulatedOutage } from './routes/monitoring.js';
 import { operationsRouter } from './routes/operations.js';
 import { payoutsRouter } from './routes/payouts.js';
+import { riderAuthRouter } from './routes/riderAuth.js';
+import { riderOrdersRouter } from './routes/riderOrders.js';
+import { cashHandoverRouter } from './routes/cashHandover.js';
 import { reconcilePendingPayments } from './lib/reconciliation.js';
 import { errorTracker } from './lib/errorTracker.js';
 import {
@@ -88,6 +91,7 @@ app.use('/api/products/search', searchRateLimiter);
 app.use('/api/checkout', checkoutRateLimiter);
 app.use('/api/auth/otp', authRateLimiter);
 app.use('/api/admin/auth/login', authRateLimiter);
+app.use('/api/delivery/auth/otp', authRateLimiter);
 app.use('/api/payments/razorpay/webhook', webhookRateLimiter);
 
 // API routes
@@ -103,6 +107,9 @@ app.use('/api/payments', paymentRouter);
 app.use('/api', monitoringRouter);
 app.use('/api', operationsRouter);
 app.use('/api', payoutsRouter);
+app.use('/api', riderAuthRouter);
+app.use('/api', riderOrdersRouter);
+app.use('/api', cashHandoverRouter);
 
 // API v1 Health Check with DB connectivity test and simulated downtime support (F20)
 app.get('/api/v1/health', async (_req: Request, res: Response) => {

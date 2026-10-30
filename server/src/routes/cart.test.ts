@@ -27,7 +27,10 @@ describe('F04: Cart API', () => {
       });
     });
 
-    const shops = await prisma.shop.findMany({ take: 2 });
+    const shops = await prisma.shop.findMany({
+      where: { name: { startsWith: '[DUMMY]' } },
+      take: 2,
+    });
     shopAId = shops[0].id;
     shopBId = shops[1].id;
 

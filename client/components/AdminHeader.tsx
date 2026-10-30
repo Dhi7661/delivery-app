@@ -10,6 +10,11 @@ interface AdminHeaderProps {
   activeTab?: 'orders' | 'deliveries' | 'products' | 'notifications' | 'settings' | 'operations' | 'payouts';
 }
 
+/**
+ * Admin Navigation Header (Spec Version 1.2)
+ * Styled using Warm Saffron Design Tokens (Dark Slate theme removed per Spec Section 0 & 11)
+ * Minimum 44px touch targets.
+ */
 export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -46,45 +51,53 @@ export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps)
       : 'orders');
 
   return (
-    <nav aria-label="Admin Navigation" className="sticky top-0 z-30 bg-slate-900 text-white border-b border-slate-800 shadow-md">
+    <nav aria-label="Admin Navigation" className="sticky top-0 z-30 bg-[#6B3A1E] text-[#FEF9F1] border-b border-[#50240A] shadow-md">
       {/* Top Bar */}
-      <div className="mx-auto max-w-lg px-4 py-3 flex items-center justify-between">
+      <div className="mx-auto max-w-5xl px-4 py-2.5 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Link href="/admin/orders" className="flex items-center gap-2">
-            <span className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center font-black text-white text-sm">
+          <Link href="/admin/orders" className="flex items-center gap-2 min-h-[44px]">
+            <span className="w-8 h-8 bg-[#FEBA49] text-[#704B00] rounded-xl flex items-center justify-center font-black text-base shadow-sm">
               P
             </span>
-            <span className="font-extrabold text-base tracking-tight text-white">PlukIt</span>
+            <span className="font-extrabold text-lg tracking-tight text-[#FEF9F1]">PlukIt</span>
           </Link>
-          <span className="px-2 py-0.5 bg-slate-800 text-saffron border border-border/40 rounded-full text-[10px] font-black uppercase tracking-wider">
+          <span className="px-2.5 py-1 bg-[#50240A] text-[#FEBA49] border border-[#FEBA49]/30 rounded-full text-[10px] font-black uppercase tracking-wider">
             Admin
           </span>
         </div>
 
         <div className="flex items-center gap-2">
           {adminEmail && (
-            <span className="text-[11px] text-slate-400 font-medium hidden sm:inline-block truncate max-w-[140px]">
+            <span className="text-xs text-[#FEF9F1]/80 font-medium hidden sm:inline-block truncate max-w-[160px]">
               {adminEmail}
             </span>
           )}
+          <Link
+            href="/delivery"
+            className="px-3 py-2 min-h-[44px] inline-flex items-center gap-1.5 bg-[#FEBA49]/20 hover:bg-[#FEBA49]/30 text-[#FEBA49] text-xs font-bold rounded-xl transition-all border border-[#FEBA49]/40 active:scale-95 cursor-pointer"
+            title="Open Rider Delivery Portal"
+          >
+            <span>🛵</span>
+            <span className="hidden xs:inline">Rider View</span>
+          </Link>
           <button
             onClick={handleLogout}
             disabled={loggingOut}
-            className="px-2.5 py-1.5 min-h-[36px] bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition-colors border border-slate-700 active:scale-95 cursor-pointer"
+            className="px-3 py-2 min-h-[44px] bg-[#50240A] hover:bg-[#401c07] text-[#FEF9F1] text-xs font-bold rounded-xl transition-colors border border-[#FEBA49]/20 active:scale-95 cursor-pointer"
           >
             {loggingOut ? 'Signing out...' : 'Sign Out'}
           </button>
         </div>
       </div>
 
-      {/* Admin Navigation Tabs */}
-      <div className="mx-auto max-w-lg px-3 flex gap-1 border-t border-slate-800/80 text-xs font-bold overflow-x-auto scrollbar-none">
+      {/* Admin Navigation Tabs - Minimum 44px touch targets */}
+      <div className="mx-auto max-w-5xl px-3 flex gap-1 border-t border-[#50240A]/60 text-xs font-bold overflow-x-auto scrollbar-none">
         <Link
           href="/admin/orders"
-          className={`py-2.5 px-2.5 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[42px] ${
+          className={`py-2.5 px-3 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[44px] ${
             currentTab === 'orders'
-              ? 'border-saffron text-saffron'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-[#FEBA49] text-[#FEBA49] bg-[#50240A]/40'
+              : 'border-transparent text-[#FEF9F1]/70 hover:text-[#FEF9F1] hover:bg-[#50240A]/20'
           }`}
         >
           <span>📦</span>
@@ -93,10 +106,10 @@ export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps)
 
         <Link
           href="/admin/deliveries"
-          className={`py-2.5 px-2.5 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[42px] ${
+          className={`py-2.5 px-3 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[44px] ${
             currentTab === 'deliveries'
-              ? 'border-saffron text-saffron'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-[#FEBA49] text-[#FEBA49] bg-[#50240A]/40'
+              : 'border-transparent text-[#FEF9F1]/70 hover:text-[#FEF9F1] hover:bg-[#50240A]/20'
           }`}
         >
           <span>🛵</span>
@@ -104,23 +117,11 @@ export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps)
         </Link>
 
         <Link
-          href="/admin/products/upload"
-          className={`py-2.5 px-2.5 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[42px] ${
-            currentTab === 'products'
-              ? 'border-saffron text-saffron'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <span>📄</span>
-          <span>CSV Upload</span>
-        </Link>
-
-        <Link
           href="/admin/payouts"
-          className={`py-2.5 px-2.5 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[42px] ${
+          className={`py-2.5 px-3 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[44px] ${
             currentTab === 'payouts'
-              ? 'border-saffron text-saffron'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-[#FEBA49] text-[#FEBA49] bg-[#50240A]/40'
+              : 'border-transparent text-[#FEF9F1]/70 hover:text-[#FEF9F1] hover:bg-[#50240A]/20'
           }`}
         >
           <span>💰</span>
@@ -128,11 +129,23 @@ export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps)
         </Link>
 
         <Link
+          href="/admin/products/upload"
+          className={`py-2.5 px-3 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[44px] ${
+            currentTab === 'products'
+              ? 'border-[#FEBA49] text-[#FEBA49] bg-[#50240A]/40'
+              : 'border-transparent text-[#FEF9F1]/70 hover:text-[#FEF9F1] hover:bg-[#50240A]/20'
+          }`}
+        >
+          <span>📄</span>
+          <span>CSV Upload</span>
+        </Link>
+
+        <Link
           href="/admin/notifications"
-          className={`py-2.5 px-2.5 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[42px] ${
+          className={`py-2.5 px-3 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[44px] ${
             currentTab === 'notifications'
-              ? 'border-saffron text-saffron'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-[#FEBA49] text-[#FEBA49] bg-[#50240A]/40'
+              : 'border-transparent text-[#FEF9F1]/70 hover:text-[#FEF9F1] hover:bg-[#50240A]/20'
           }`}
         >
           <span>🔔</span>
@@ -141,10 +154,10 @@ export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps)
 
         <Link
           href="/admin/operations"
-          className={`py-2.5 px-2.5 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[42px] ${
+          className={`py-2.5 px-3 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[44px] ${
             currentTab === 'operations'
-              ? 'border-saffron text-saffron'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-[#FEBA49] text-[#FEBA49] bg-[#50240A]/40'
+              : 'border-transparent text-[#FEF9F1]/70 hover:text-[#FEF9F1] hover:bg-[#50240A]/20'
           }`}
         >
           <span>📊</span>
@@ -153,10 +166,10 @@ export default function AdminHeader({ adminEmail, activeTab }: AdminHeaderProps)
 
         <Link
           href="/admin/settings"
-          className={`py-2.5 px-2.5 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[42px] ${
+          className={`py-2.5 px-3 border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap min-h-[44px] ${
             currentTab === 'settings'
-              ? 'border-saffron text-saffron'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-[#FEBA49] text-[#FEBA49] bg-[#50240A]/40'
+              : 'border-transparent text-[#FEF9F1]/70 hover:text-[#FEF9F1] hover:bg-[#50240A]/20'
           }`}
         >
           <span>⚙️</span>

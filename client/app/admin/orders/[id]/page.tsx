@@ -31,6 +31,10 @@ interface OrderDetailData {
   payment_method: string;
   payment_status: string;
   idempotency_key: string;
+  confirmed_with_customer_at?: string | null;
+  customer_confirmation_method?: string | null;
+  customer_accepted_changes_at?: string | null;
+  shop_packing_note?: string | null;
   created_at: string;
   updated_at: string;
   allowedTransitions: OrderStatus[];
@@ -40,6 +44,8 @@ interface OrderDetailData {
     mrp_paise: number;
     selling_price_paise: number;
     line_total_paise: number;
+    is_available?: boolean;
+    unavailable_noted_at?: string | null;
     product: {
       name: string;
       brand: string | null;

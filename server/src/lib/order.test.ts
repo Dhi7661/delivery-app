@@ -13,7 +13,7 @@ describe('F05: Order Data Model', () => {
   beforeAll(async () => {
     await seedCatalog();
 
-    const shop = await prisma.shop.findFirst();
+    const shop = await prisma.shop.findFirst({ where: { name: '[DUMMY] Green Valley Supermarket' } });
     testShopId = shop!.id;
 
     const products = await prisma.product.findMany({

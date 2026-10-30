@@ -91,7 +91,10 @@ export default function AdminPayoutsPage() {
 
   // Modal: Record Bank Transfer
   const [transferModalPayout, setTransferModalPayout] = useState<PayoutItem | null>(null);
+  const [paymentMode, setPaymentMode] = useState<'BANK' | 'UPI' | 'CASH'>('BANK');
   const [bankRefInput, setBankRefInput] = useState<string>('');
+  const [upiRefInput, setUpiRefInput] = useState<string>('');
+  const [cashNoteInput, setCashNoteInput] = useState<string>('');
   const [submittingTransfer, setSubmittingTransfer] = useState(false);
 
   // Modal: View Statement
@@ -279,7 +282,10 @@ export default function AdminPayoutsPage() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          bankReference: bankRefInput.trim(),
+          paymentMode,
+          bankReference: paymentMode === 'BANK' ? bankRefInput.trim() : undefined,
+          upiRef: paymentMode === 'UPI' ? upiRefInput.trim() : undefined,
+          cashNote: paymentMode === 'CASH' ? cashNoteInput.trim() : undefined,
         }),
       });
 
@@ -989,19 +995,83 @@ export default function AdminPayoutsPage() {
 
             <form onSubmit={handleRecordTransfer} className="mt-4 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">
-                  Bank Transfer Reference (UTR / IMPS / NEFT) *
+                <label className="block text-xs font-bold text-slate-300 mb-2">
+                  Settlement Mode (Spec Section 9.1) *
                 </label>
-                <input
-                  type="text"
-                  value={bankRefInput}
-                  onChange={(e) => setBankRefInput(e.target.value)}
-                  placeholder="e.g. UTR20261030018894"
-                  required
-                  minLength={4}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 font-mono focus:outline-none focus:border-emerald-500"
-                />
+                <div className="grid grid-cols-3 gap-2">
+                  {(['BANK', 'UPI', 'CASH'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setPaymentMode(mode)}
+                      className={`py-2 px-3 min-h-[44px] text-xs font-extrabold rounded-xl border transition-all ${
+                        paymentMode === mode
+                          ? 'bg-[#FEBA49] text-[#704B00] border-[#FEBA49]'
+                          : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                      }`}
+                    >
+                      {mode === 'BANK' ? '🏦 Bank UTR' : mode === 'UPI' ? '📱 Direct UPI' : '💵 Cash'}
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              {paymentMode === 'UPI' && (
+                <div className="space-y-2">
+                  <div className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs">
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Shop Registered UPI ID:</span>
+                    <span className="text-emerald-400 font-mono font-bold">
+                      {(transferModalPayout.shop as any).upi_id || 'shop@okaxis (Default)'}
+                    </span>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">
+                      12-Digit UPI Transaction Reference *
+                    </label>
+                    <input
+                      type="text"
+                      value={upiRefInput}
+                      onChange={(e) => setUpiRefInput(e.target.value)}
+                      placeholder="e.g. 412356789012"
+                      required
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 font-mono focus:outline-none focus:border-emerald-500 min-h-[44px]"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {paymentMode === 'CASH' && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Cash Handover Note (Date, Amount & Recipient Name) *
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={cashNoteInput}
+                    onChange={(e) => setCashNoteInput(e.target.value)}
+                    placeholder="e.g. Cash handed over in person to shop owner Ramesh on 30-Oct-2026."
+                    required
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              )}
+
+              {paymentMode === 'BANK' && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Bank Transfer Reference (UTR / IMPS / NEFT) *
+                  </label>
+                  <input
+                    type="text"
+                    value={bankRefInput}
+                    onChange={(e) => setBankRefInput(e.target.value)}
+                    placeholder="e.g. UTR20261030018894"
+                    required
+                    minLength={4}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 font-mono focus:outline-none focus:border-emerald-500 min-h-[44px]"
+                  />
+                </div>
+              )}
 
               {/* F23 Rule Warning */}
               <div className="p-3 bg-amber-950/40 border border-amber-600/40 rounded-xl text-[11px] text-amber-300 leading-relaxed">
