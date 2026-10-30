@@ -37,6 +37,7 @@ export default function CheckoutPage() {
   const [pincode, setPincode] = useState(SERVICEABLE_PINCODE);
   const [idempotencyKey, setIdempotencyKey] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'COD'>('UPI');
+  const [onlinePaymentsEnabled, setOnlinePaymentsEnabled] = useState(true);
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -105,14 +106,29 @@ export default function CheckoutPage() {
     }
   }, [user]);
 
+  // Fetch public settings for payment kill-switch (F21)
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/settings/public`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && typeof data.onlinePaymentsEnabled === 'boolean') {
+          setOnlinePaymentsEnabled(data.onlinePaymentsEnabled);
+          if (!data.onlinePaymentsEnabled) {
+            setPaymentMethod('COD');
+          }
+        }
+      })
+      .catch((err) => console.error('Failed to load public settings', err));
+  }, []);
+
   const isOverCodLimit = cart && cart.total_paise > COD_MAX_LIMIT_PAISE;
 
-  // Auto-switch to UPI if cart exceeds COD limit
+  // Auto-switch to UPI if cart exceeds COD limit (only if online payments enabled)
   useEffect(() => {
-    if (isOverCodLimit && paymentMethod === 'COD') {
+    if (isOverCodLimit && paymentMethod === 'COD' && onlinePaymentsEnabled) {
       setPaymentMethod('UPI');
     }
-  }, [isOverCodLimit, paymentMethod]);
+  }, [isOverCodLimit, paymentMethod, onlinePaymentsEnabled]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,11 +146,25 @@ export default function CheckoutPage() {
       return;
     }
 
+    // Kill-switch validation (F21)
+    if (paymentMethod === 'UPI' && !onlinePaymentsEnabled) {
+      setErrorMessage(
+        'Online payments are temporarily paused for maintenance. Please select Cash on Delivery.'
+      );
+      return;
+    }
+
     // COD limit validation applies ONLY if COD is selected
     if (paymentMethod === 'COD' && isOverCodLimit) {
-      setErrorMessage(
-        'Order total exceeds the ₹1,000 Cash on Delivery limit. Please select Pay Online (UPI) or adjust items in cart.'
-      );
+      if (!onlinePaymentsEnabled) {
+        setErrorMessage(
+          'Online payments are temporarily paused and order total exceeds the ₹1,000 Cash on Delivery limit. Please reduce your cart size below ₹1,000 to order via COD.'
+        );
+      } else {
+        setErrorMessage(
+          'Order total exceeds the ₹1,000 Cash on Delivery limit. Please select Pay Online (UPI) or adjust items in cart.'
+        );
+      }
       return;
     }
 
@@ -209,6 +239,10 @@ export default function CheckoutPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        if (data.code === 'ONLINE_PAYMENTS_DISABLED') {
+          setOnlinePaymentsEnabled(false);
+          setPaymentMethod('COD');
+        }
         setErrorMessage(data.error || 'Failed to place order. Please try again.');
         setSubmitting(false);
         return;
@@ -677,16 +711,26 @@ export default function CheckoutPage() {
               <div className="space-y-2.5">
                 {/* 1. UPI Payment Option */}
                 <div
-                  onClick={() => setPaymentMethod('UPI')}
-                  className={`cursor-pointer rounded-[14px] border p-3.5 transition-all flex items-start gap-3 ${
-                    paymentMethod === 'UPI'
-                      ? 'border-primary bg-surface shadow-2xs'
-                      : 'border-border bg-card hover:bg-surface/50'
+                  onClick={() => {
+                    if (!onlinePaymentsEnabled) {
+                      setErrorMessage(
+                        'Online payments are temporarily paused for maintenance. Please use Cash on Delivery.'
+                      );
+                      return;
+                    }
+                    setPaymentMethod('UPI');
+                  }}
+                  className={`rounded-[14px] border p-3.5 transition-all flex items-start gap-3 ${
+                    !onlinePaymentsEnabled
+                      ? 'border-border bg-chip opacity-60 cursor-not-allowed'
+                      : paymentMethod === 'UPI'
+                      ? 'border-primary bg-surface shadow-2xs cursor-pointer'
+                      : 'border-border bg-card hover:bg-surface/50 cursor-pointer'
                   }`}
                 >
                   <div
                     className={`mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border text-xs font-bold shrink-0 ${
-                      paymentMethod === 'UPI'
+                      onlinePaymentsEnabled && paymentMethod === 'UPI'
                         ? 'border-primary bg-primary text-card'
                         : 'border-border bg-card text-transparent'
                     }`}
@@ -697,11 +741,18 @@ export default function CheckoutPage() {
                     <div className="flex items-center justify-between gap-1 flex-wrap">
                       <div className="flex items-center gap-1.5">
                         <span className="text-sm font-bold text-heading">UPI Options</span>
+                        {!onlinePaymentsEnabled && (
+                          <span className="rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2 py-0.5 text-[10px] font-extrabold uppercase">
+                            Paused (Maintenance)
+                          </span>
+                        )}
                       </div>
-                      <span className="text-primary text-sm font-bold">✓</span>
+                      {onlinePaymentsEnabled && <span className="text-primary text-sm font-bold">✓</span>}
                     </div>
                     <p className="mt-0.5 text-xs text-muted">
-                      GPay, PhonePe, Paytm, QR. Safe and secure.
+                      {onlinePaymentsEnabled
+                        ? 'GPay, PhonePe, Paytm, QR. Safe and secure.'
+                        : 'Online payments temporarily unavailable. Please use Cash on Delivery.'}
                     </p>
                   </div>
                 </div>
@@ -709,7 +760,7 @@ export default function CheckoutPage() {
                 {/* 2. Cash on Delivery (COD) Option */}
                 <div
                   onClick={() => {
-                    if (isOverCodLimit) {
+                    if (isOverCodLimit && onlinePaymentsEnabled) {
                       setErrorMessage(
                         'Orders exceeding ₹1,000 must be paid online via UPI. Please use UPI payment.'
                       );
@@ -718,7 +769,7 @@ export default function CheckoutPage() {
                     setPaymentMethod('COD');
                   }}
                   className={`rounded-[14px] border p-3.5 transition-all flex items-start gap-3 ${
-                    isOverCodLimit
+                    isOverCodLimit && onlinePaymentsEnabled
                       ? 'border-border bg-chip opacity-60 cursor-not-allowed'
                       : paymentMethod === 'COD'
                       ? 'border-primary bg-surface shadow-2xs cursor-pointer'

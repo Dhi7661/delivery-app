@@ -25,6 +25,11 @@ export const INITIAL_SETTINGS = [
     value_paise: 100000, // ₹1,000
     is_dummy: true,
   },
+  {
+    key: 'ONLINE_PAYMENTS_ENABLED',
+    value_paise: 1,
+    is_dummy: false,
+  },
 ];
 
 /**
