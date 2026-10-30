@@ -1,5 +1,7 @@
 'use client';
 
+import Footer from '@/components/ui/Footer';
+
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Header from '@/components/ui/Header';
@@ -462,6 +464,7 @@ export default function AccountPage() {
             )}
           </div>
         )}
+        <Footer />
       </main>
 
       <CartBar />

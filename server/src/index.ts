@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import helmet from 'helmet';
 import { prisma } from './lib/db.js';
 import { BRAND_NAME } from './lib/brand.js';
 import { catalogRouter } from './routes/catalog.js';
@@ -14,16 +15,59 @@ import { deliveryRouter } from './routes/delivery.js';
 import { invoiceRouter } from './routes/invoice.js';
 import { paymentRouter } from './routes/payment.js';
 import { reconcilePendingPayments } from './lib/reconciliation.js';
+import {
+  authRateLimiter,
+  checkoutRateLimiter,
+  searchRateLimiter,
+  webhookRateLimiter,
+} from './lib/rateLimit.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
-  credentials: true,
-}));
+// F19: Security Hardening with Helmet (CSP, HSTS, X-Content-Type-Options, etc.)
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", 'https://checkout.razorpay.com'],
+        frameSrc: ["'self'", 'https://api.razorpay.com'],
+        connectSrc: ["'self'", 'https://lumberjack.razorpay.com', 'https://api.razorpay.com'],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+      },
+    },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+  })
+);
+
+// F19: Restrict CORS to allowed client domains
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+].filter(Boolean) as string[];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // allow requests with no origin (like mobile apps, curl, server-to-server)
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+  })
+);
 
 app.use(cookieParser());
 app.use(
@@ -34,6 +78,13 @@ app.use(
     },
   })
 );
+
+// F19: Rate limiters on sensitive endpoints
+app.use('/api/products/search', searchRateLimiter);
+app.use('/api/checkout', checkoutRateLimiter);
+app.use('/api/auth/otp', authRateLimiter);
+app.use('/api/admin/auth/login', authRateLimiter);
+app.use('/api/payments/razorpay/webhook', webhookRateLimiter);
 
 // API routes
 app.use('/api', catalogRouter);
@@ -71,6 +122,9 @@ app.get('/api/v1/health', async (_req: Request, res: Response) => {
 
 // Central Error Handler
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  if (err.message && err.message.includes('CORS')) {
+    return res.status(403).json({ error: err.message });
+  }
   console.error('Unhandled Server Error:', err);
   res.status(500).json({
     error: 'Internal Server Error',

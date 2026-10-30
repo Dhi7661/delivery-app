@@ -542,6 +542,9 @@ checkoutRouter.get('/orders/:orderNo', async (req: Request, res: Response) => {
         return res.status(403).json({ error: 'Phone number does not match this order.' });
       }
       isVerified = true;
+    } else if (order.user_id) {
+      // Customer order cannot be viewed without authentication or matching phone
+      return res.status(403).json({ error: 'You do not have permission to view this order.' });
     }
 
     const sanitizedOrder = {

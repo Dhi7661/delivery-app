@@ -8,6 +8,7 @@ import CartBar from '@/components/ui/CartBar';
 import CategoryTile from '@/components/ui/CategoryTile';
 import ProductCard from '@/components/ui/ProductCard';
 import SectionHeading from '@/components/ui/SectionHeading';
+import Footer from '@/components/ui/Footer';
 import { API_BASE_URL, Category, ProductSummary } from '@/lib/api';
 import { DELIVERY_ETA_TEXT } from '@/lib/brand';
 
@@ -199,6 +200,9 @@ export default function Home() {
             </div>
           )}
         </section>
+
+        {/* Legal and Governance Footer */}
+        <Footer />
       </main>
 
       {/* Sticky Cart Summary Bar above Bottom Navigation */}
