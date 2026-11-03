@@ -79,6 +79,12 @@ describe('Phase C1: Admin Product List & Stock Toggles', () => {
   });
 
   afterAll(async () => {
+    await prisma.priceHistory.deleteMany({
+      where: { product: { name: { contains: 'Organic Fresh Butter' } } },
+    });
+    await prisma.product.deleteMany({
+      where: { name: { contains: 'Organic Fresh Butter' } },
+    });
     await new Promise<void>((resolve) => {
       if (server) {
         server.close(() => resolve());
@@ -510,6 +516,140 @@ describe('Phase C1: Admin Product List & Stock Toggles', () => {
     expect(dupRes.status).toBe(409);
     const dupData = await dupRes.json();
     expect(dupData.error).toContain('already exists for this shop');
+
+    // Clean up created product to keep catalog seed product count clean
+    await prisma.priceHistory.deleteMany({ where: { product_id: data.product.id } });
+    await prisma.product.delete({ where: { id: data.product.id } });
+  });
+
+  // Phase C3 Tests: Edit Product & Price History Audit
+  it('17. PUT /api/admin/products/:id rejects unauthorized calls with HTTP 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/products/${sampleProductId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Unauthorized Change' }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('18. PUT /api/admin/products/:id rejects customer tokens with HTTP 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/products/${sampleProductId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: customerCookie,
+      },
+      body: JSON.stringify({ name: 'Customer Attempt' }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('19. PUT /api/admin/products/:id rejects illegal prices (selling > mrp and selling < buy)', async () => {
+    const prod = await prisma.product.findUnique({ where: { id: sampleProductId } });
+
+    // 1. Overpriced test: selling > mrp
+    const overRes = await fetch(`${BASE_URL}/api/admin/products/${sampleProductId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: adminCookie,
+      },
+      body: JSON.stringify({
+        name: prod!.name,
+        unit_size: prod!.unit_size,
+        category_id: prod!.category_id,
+        shop_id: prod!.shop_id,
+        mrp_paise: 5000,
+        shop_price_paise: 4000,
+        selling_price_paise: 6000, // > 5000
+      }),
+    });
+    expect(overRes.status).toBe(400);
+    const overData = await overRes.json();
+    expect(overData.error).toContain('cannot exceed printed MRP');
+
+    // 2. Underpriced test: selling < buy
+    const underRes = await fetch(`${BASE_URL}/api/admin/products/${sampleProductId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: adminCookie,
+      },
+      body: JSON.stringify({
+        name: prod!.name,
+        unit_size: prod!.unit_size,
+        category_id: prod!.category_id,
+        shop_id: prod!.shop_id,
+        mrp_paise: 5000,
+        shop_price_paise: 4000,
+        selling_price_paise: 3500, // < 4000
+      }),
+    });
+    expect(underRes.status).toBe(400);
+    const underData = await underRes.json();
+    expect(underData.error).toContain('cannot be lower than shop buy price');
+  });
+
+  it('20. PUT /api/admin/products/:id updates details and records price history when price moves', async () => {
+    const prod = await prisma.product.findUnique({ where: { id: sampleProductId } });
+
+    const newSellingPaise = prod!.mrp_paise; // sell at full MRP
+    const updatedBrand = 'SuperPremiumBrand';
+
+    const res = await fetch(`${BASE_URL}/api/admin/products/${sampleProductId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: adminCookie,
+      },
+      body: JSON.stringify({
+        name: prod!.name,
+        brand: updatedBrand,
+        unit_size: prod!.unit_size,
+        category_id: prod!.category_id,
+        shop_id: prod!.shop_id,
+        mrp_paise: prod!.mrp_paise,
+        shop_price_paise: prod!.shop_price_paise,
+        selling_price_paise: newSellingPaise,
+        hsn_code: '04011000',
+        gst_rate: 5.0,
+        is_available: true,
+        is_active: true,
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.product.brand).toBe(updatedBrand);
+    expect(data.product.selling_price_paise).toBe(newSellingPaise);
+
+    // Verify price history record exists
+    const history = await prisma.priceHistory.findFirst({
+      where: {
+        product_id: sampleProductId,
+        selling_price_paise: newSellingPaise,
+      },
+      orderBy: { effective_from: 'desc' },
+    });
+    expect(history).toBeDefined();
+
+    // Verify GET /:id returns the new price history
+    const getRes = await fetch(`${BASE_URL}/api/admin/products/${sampleProductId}`, {
+      headers: { Cookie: adminCookie },
+    });
+    const getData = await getRes.json();
+    expect(getData.product.price_history.length).toBeGreaterThan(0);
+    expect(getData.product.brand).toBe(updatedBrand);
+
+    // Restore original product data to preserve catalog count and state
+    await prisma.product.update({
+      where: { id: sampleProductId },
+      data: {
+        brand: prod!.brand,
+        selling_price_paise: prod!.selling_price_paise,
+      },
+    });
   });
 });
 

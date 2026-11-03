@@ -433,6 +433,192 @@ adminProductsRouter.get('/:id', async (req: Request, res: Response) => {
 });
 
 /**
+ * PUT /api/admin/products/:id
+ * Full product edit with price rule enforcement and audit history.
+ */
+adminProductsRouter.put('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const admin = (req as any).admin;
+
+    const existing = await prisma.product.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    const parseResult = createProductSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        error: parseResult.error.errors[0]?.message || 'Invalid product update data',
+      });
+    }
+
+    const {
+      name,
+      brand,
+      unit_size,
+      category_id,
+      shop_id,
+      mrp_paise,
+      shop_price_paise,
+      selling_price_paise,
+      hsn_code,
+      gst_rate,
+      is_available,
+      is_active,
+      sku,
+      barcode,
+      photo_base64,
+    } = parseResult.data;
+
+    // Validate photo content if provided
+    if (photo_base64) {
+      const cleanBase64 = photo_base64.replace(/^data:image\/[a-z0-9+]+;base64,/, '');
+      const photoBuffer = Buffer.from(cleanBase64, 'base64');
+      const imgValidation = validateImageBuffer(photoBuffer);
+      if (!imgValidation.valid) {
+        return res.status(400).json({ error: imgValidation.error });
+      }
+    }
+
+    // Business rule: Selling price cannot exceed MRP
+    if (selling_price_paise > mrp_paise) {
+      return res.status(400).json({
+        error: `Selling price (₹${(selling_price_paise / 100).toFixed(2)}) cannot exceed printed MRP (₹${(mrp_paise / 100).toFixed(2)}).`,
+      });
+    }
+
+    // Business rule: Selling price cannot be lower than buy price
+    if (selling_price_paise < shop_price_paise) {
+      return res.status(400).json({
+        error: `Selling price (₹${(selling_price_paise / 100).toFixed(2)}) cannot be lower than shop buy price (₹${(shop_price_paise / 100).toFixed(2)}).`,
+      });
+    }
+
+    // Check category exists
+    const category = await prisma.category.findUnique({ where: { id: category_id } });
+    if (!category) {
+      return res.status(400).json({ error: 'Selected category does not exist' });
+    }
+
+    // Check shop exists
+    const shop = await prisma.shop.findUnique({ where: { id: shop_id } });
+    if (!shop) {
+      return res.status(400).json({ error: 'Selected partner shop does not exist' });
+    }
+
+    // Conflict check excluding current product
+    const conflict = await prisma.product.findFirst({
+      where: {
+        shop_id,
+        name,
+        unit_size,
+        NOT: { id },
+      },
+    });
+
+    if (conflict) {
+      return res.status(409).json({
+        error: `Another product named "${name}" with unit size "${unit_size}" already exists for this shop.`,
+      });
+    }
+
+    const priceChanged =
+      existing.mrp_paise !== mrp_paise ||
+      existing.shop_price_paise !== shop_price_paise ||
+      existing.selling_price_paise !== selling_price_paise;
+
+    const codeValue = hsn_code || sku || barcode || null;
+
+    const updated = await prisma.product.update({
+      where: { id },
+      data: {
+        name,
+        brand: brand || null,
+        unit_size,
+        category_id,
+        shop_id,
+        mrp_paise,
+        shop_price_paise,
+        selling_price_paise,
+        hsn_code: codeValue,
+        gst_rate: gst_rate || 0.0,
+        is_available: is_available ?? existing.is_available,
+        is_active: is_active ?? existing.is_active,
+      },
+      include: {
+        category: { select: { id: true, name: true } },
+        shop: { select: { id: true, name: true } },
+        price_history: {
+          orderBy: { effective_from: 'desc' },
+          take: 20,
+        },
+      },
+    });
+
+    // Record price change if any price parameter moved
+    if (priceChanged) {
+      await prisma.priceHistory.create({
+        data: {
+          product_id: id,
+          mrp_paise,
+          shop_price_paise,
+          selling_price_paise,
+        },
+      });
+    }
+
+    // Immediately invalidate customer storefront catalog cache
+    catalogCache.invalidate();
+
+    // Audit log
+    await prisma.auditLog.create({
+      data: {
+        actor_id: admin.id,
+        action: 'PRODUCT_UPDATE',
+        entity: 'product',
+        entity_id: id,
+        old_value: {
+          name: existing.name,
+          selling_price_paise: existing.selling_price_paise,
+          shop_price_paise: existing.shop_price_paise,
+          mrp_paise: existing.mrp_paise,
+        },
+        new_value: {
+          name,
+          selling_price_paise,
+          shop_price_paise,
+          mrp_paise,
+          priceChanged,
+        },
+      },
+    }).catch(() => null);
+
+    const marginPaise = updated.selling_price_paise - updated.shop_price_paise;
+    const marginPct =
+      updated.selling_price_paise > 0
+        ? Math.round((marginPaise / updated.selling_price_paise) * 1000) / 10
+        : 0;
+
+    return res.status(200).json({
+      success: true,
+      product: {
+        ...updated,
+        margin_paise: marginPaise,
+        margin_pct: marginPct,
+        is_low_margin: marginPct < 10,
+      },
+    });
+  } catch (err: any) {
+    console.error('Error updating product:', err);
+    return res.status(500).json({ error: 'Failed to update product' });
+  }
+});
+
+/**
  * PATCH /api/admin/products/:id/toggle-stock
  * Toggles product stock availability (is_available).
  */

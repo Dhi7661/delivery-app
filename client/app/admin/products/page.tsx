@@ -462,7 +462,12 @@ export default function AdminProductsPage() {
                               {p.name[0]}
                             </div>
                             <div className="min-w-0">
-                              <p className="font-bold text-gray-900 truncate">{p.name}</p>
+                              <Link
+                                href={`/admin/products/${p.id}`}
+                                className="font-bold text-gray-900 hover:text-emerald-700 truncate block hover:underline"
+                              >
+                                {p.name}
+                              </Link>
                               <p className="text-[11px] text-gray-500 truncate">
                                 {p.brand ? `${p.brand} • ` : ""}
                                 {p.unit_size}
@@ -637,7 +642,9 @@ export default function AdminProductsPage() {
                         </span>
                       </div>
                       <h3 className="font-bold text-gray-900 text-base leading-snug mt-1">
-                        {p.name}
+                        <Link href={`/admin/products/${p.id}`} className="hover:text-emerald-700">
+                          {p.name}
+                        </Link>
                       </h3>
                       <p className="text-xs text-gray-500">
                         {p.brand ? `${p.brand} • ` : ""}

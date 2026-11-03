@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminBottomNav from "@/components/admin/AdminBottomNav";
@@ -13,7 +13,7 @@ interface AdminUserSession {
   role: string;
 }
 
-export default function AdminLayout({
+function AdminLayoutInner({
   children,
 }: {
   children: React.ReactNode;
@@ -120,6 +120,24 @@ export default function AdminLayout({
         adminRole={admin?.role || "Owner"}
       />
     </div>
+  );
+}
+
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+          <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      }
+    >
+      <AdminLayoutInner>{children}</AdminLayoutInner>
+    </Suspense>
   );
 }
 
