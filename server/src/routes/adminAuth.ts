@@ -383,3 +383,4 @@ adminAuthRouter.post('/logout', async (req: Request, res: Response) => {
 
   return res.status(200).json({ success: true, message: 'Logged out successfully.' });
 });
+
