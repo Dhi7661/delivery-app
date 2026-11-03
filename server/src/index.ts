@@ -13,6 +13,7 @@ import { addressRouter } from './routes/address.js';
 import { invoiceRouter } from './routes/invoice.js';
 import { paymentRouter } from './routes/payment.js';
 import { monitoringRouter, isSimulatedOutage } from './routes/monitoring.js';
+import { adminAuthRouter } from './routes/adminAuth.js';
 import { reconcilePendingPayments } from './lib/reconciliation.js';
 import { errorTracker } from './lib/errorTracker.js';
 import {
@@ -94,6 +95,7 @@ app.use('/api', addressRouter);
 app.use('/api', invoiceRouter);
 app.use('/api/payments', paymentRouter);
 app.use('/api', monitoringRouter);
+app.use('/api/admin/auth', adminAuthRouter);
 
 // API v1 Health Check with DB connectivity test and simulated downtime support (F20)
 app.get('/api/v1/health', async (_req: Request, res: Response) => {
