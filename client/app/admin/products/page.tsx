@@ -59,6 +59,15 @@ export default function AdminProductsPage() {
   const [priceSaving, setPriceSaving] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
 
+  // CSV Import / Export State
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [csvFileContent, setCsvFileContent] = useState<string | null>(null);
+  const [csvFileName, setCsvFileName] = useState<string | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importErrors, setImportErrors] = useState<Array<{ row: number; error: string }>>([]);
+  const [importPreview, setImportPreview] = useState<{ count: number; preview: any[] } | null>(null);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
+
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
@@ -210,6 +219,99 @@ export default function AdminProductsPage() {
     setSelectedIds(next);
   };
 
+  const handleExportCsv = async () => {
+    try {
+      const res = await fetch("http://localhost:4000/api/admin/products/export/csv", {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to export catalog CSV");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `plukit-catalog-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      alert("Failed to export CSV: " + err.message);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImportErrors([]);
+    setImportPreview(null);
+    setImportSuccess(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCsvFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setCsvFileContent(event.target?.result as string);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDryRun = async () => {
+    if (!csvFileContent) return;
+    setImportLoading(true);
+    setImportErrors([]);
+    setImportPreview(null);
+    try {
+      const res = await fetch("http://localhost:4000/api/admin/products/import/csv", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ csvText: csvFileContent, dryRun: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setImportErrors(data.errors || [{ row: 1, error: data.error || "Dry run validation failed" }]);
+      } else {
+        setImportPreview({ count: data.count, preview: data.preview });
+      }
+    } catch (err: any) {
+      setImportErrors([{ row: 1, error: err.message || "Failed to run dry run" }]);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!csvFileContent) return;
+    setImportLoading(true);
+    setImportErrors([]);
+    try {
+      const res = await fetch("http://localhost:4000/api/admin/products/import/csv", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ csvText: csvFileContent, dryRun: false }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setImportErrors(data.errors || [{ row: 1, error: data.error || "Import failed" }]);
+      } else {
+        setImportSuccess(
+          `Successfully processed ${data.total} products (${data.createdCount} new created, ${data.updatedCount} updated)!`
+        );
+        fetchProducts();
+        setTimeout(() => {
+          setShowImportModal(false);
+          setImportSuccess(null);
+          setCsvFileContent(null);
+          setCsvFileName(null);
+          setImportPreview(null);
+        }, 2000);
+      }
+    } catch (err: any) {
+      setImportErrors([{ row: 1, error: err.message || "Failed to commit import" }]);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       {/* Top Header */}
@@ -228,15 +330,32 @@ export default function AdminProductsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
           <button
-            onClick={() => alert("CSV Export will be enabled in Phase C4.")}
+            onClick={handleExportCsv}
             className="px-3.5 py-2 rounded-xl text-xs font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 shadow-xs transition-colors min-h-[44px] flex items-center gap-1.5"
+            title="Download full catalog as CSV"
           >
             <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
             Export CSV
+          </button>
+
+          <button
+            onClick={() => {
+              setShowImportModal(true);
+              setImportErrors([]);
+              setImportPreview(null);
+              setImportSuccess(null);
+            }}
+            className="px-3.5 py-2 rounded-xl text-xs font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 shadow-xs transition-colors min-h-[44px] flex items-center gap-1.5"
+            title="Bulk import or price update via CSV"
+          >
+            <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Import CSV
           </button>
 
           <Link
@@ -708,6 +827,152 @@ export default function AdminProductsPage() {
             })}
           </div>
         </>
+      )}
+
+      {/* CSV Import Modal (Phase C4) */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-5 sm:p-6 shadow-xl border border-gray-200 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-gray-900">Import Catalog CSV</h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Bulk create or update products and prices with dry-run verification
+                </p>
+              </div>
+              <button
+                onClick={() => setShowImportModal(false)}
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Template & Guidelines */}
+            <div className="p-3.5 bg-gray-50 rounded-xl text-xs space-y-2 text-gray-600 border border-gray-200">
+              <p className="font-bold text-gray-800">Required CSV Columns:</p>
+              <code className="block p-2 bg-white rounded border border-gray-200 text-[11px] font-mono break-all text-gray-700">
+                shop_name,category,product_name,brand,unit_size,mrp_rupees,shop_price_rupees,selling_price_rupees
+              </code>
+              <p className="text-[11px] text-gray-500">
+                Rule: Buy Price ≤ Selling Price ≤ Printed MRP. Existing products matched by shop, name &amp; unit size will have prices updated and audit logged.
+              </p>
+            </div>
+
+            {/* File Picker */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                Select CSV File
+              </label>
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                onChange={handleFileChange}
+                className="w-full text-xs text-gray-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer min-h-[44px]"
+              />
+              {csvFileName && (
+                <p className="text-xs text-emerald-700 font-semibold flex items-center gap-1">
+                  ✓ Selected: {csvFileName}
+                </p>
+              )}
+            </div>
+
+            {/* Row-Level Errors Banner */}
+            {importErrors.length > 0 && (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl space-y-2 text-xs">
+                <p className="font-bold text-rose-800 flex items-center gap-1.5">
+                  <svg className="w-4 h-4 text-rose-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Validation Failed ({importErrors.length} error{importErrors.length === 1 ? "" : "s"} found)
+                </p>
+                <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
+                  {importErrors.map((err, idx) => (
+                    <div key={idx} className="flex items-start gap-2 text-[11px] text-rose-700">
+                      <span className="font-bold bg-rose-100 px-1.5 py-0.5 rounded text-rose-800 shrink-0">
+                        Row {err.row}
+                      </span>
+                      <span>{err.error}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Dry Run Preview Banner */}
+            {importPreview && (
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2 text-xs">
+                <p className="font-bold text-emerald-800 flex items-center gap-1.5">
+                  <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Dry Run Passed! {importPreview.count} valid products ready to import.
+                </p>
+                <div className="max-h-32 overflow-y-auto border border-emerald-100 bg-white rounded-lg">
+                  <table className="w-full text-left text-[11px]">
+                    <thead className="bg-emerald-50 text-emerald-900 border-b border-emerald-100 font-bold">
+                      <tr>
+                        <th className="p-1.5">Product</th>
+                        <th className="p-1.5">Shop</th>
+                        <th className="p-1.5 text-right">MRP</th>
+                        <th className="p-1.5 text-right">Selling</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {importPreview.preview.map((r, i) => (
+                        <tr key={i}>
+                          <td className="p-1.5 font-medium truncate max-w-[120px]">{r.productName}</td>
+                          <td className="p-1.5 text-gray-500 truncate max-w-[100px]">{r.shopName}</td>
+                          <td className="p-1.5 text-right font-medium">₹{(r.mrpPaise / 100).toFixed(2)}</td>
+                          <td className="p-1.5 text-right font-bold text-emerald-700">₹{(r.sellingPricePaise / 100).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Success Message */}
+            {importSuccess && (
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 flex items-center gap-2">
+                <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                {importSuccess}
+              </div>
+            )}
+
+            {/* Modal Actions */}
+            <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5 pt-2 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setShowImportModal(false)}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 min-h-[44px]"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                disabled={!csvFileContent || importLoading}
+                onClick={handleDryRun}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-xs font-bold text-emerald-800 disabled:opacity-50 min-h-[44px] flex items-center justify-center gap-1.5"
+              >
+                {importLoading ? "Checking..." : "Preview (Dry Run)"}
+              </button>
+
+              <button
+                type="button"
+                disabled={!csvFileContent || importLoading || !importPreview || importErrors.length > 0}
+                onClick={handleConfirmImport}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white shadow-xs disabled:opacity-40 min-h-[44px] flex items-center justify-center gap-1.5"
+              >
+                {importLoading ? "Importing..." : "Confirm & Import"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

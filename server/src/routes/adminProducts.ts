@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/db.js';
 import { requireAdmin } from './adminAuth.js';
 import { catalogCache } from '../lib/catalogCache.js';
+import { validateAndParseProductCsv } from '../lib/csvParser.js';
 
 export const adminProductsRouter = Router();
 
@@ -159,6 +160,72 @@ adminProductsRouter.get('/meta', async (_req: Request, res: Response) => {
   } catch (err: any) {
     console.error('Error fetching admin products meta:', err);
     return res.status(500).json({ error: 'Failed to fetch categories and shops' });
+  }
+});
+
+/**
+ * GET /api/admin/products/export/csv
+ * Exports catalog to CSV with standard headers.
+ */
+adminProductsRouter.get('/export/csv', async (_req: Request, res: Response) => {
+  try {
+    const products = await prisma.product.findMany({
+      include: {
+        category: { select: { name: true } },
+        shop: { select: { name: true } },
+      },
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+    });
+
+    const headers = [
+      'shop_name',
+      'category',
+      'product_name',
+      'brand',
+      'unit_size',
+      'mrp_rupees',
+      'shop_price_rupees',
+      'selling_price_rupees',
+      'is_available',
+      'is_active',
+    ];
+
+    const escapeCsv = (str: string) => {
+      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const lines = [headers.join(',')];
+
+    for (const p of products) {
+      const row = [
+        escapeCsv(p.shop.name),
+        escapeCsv(p.category.name),
+        escapeCsv(p.name),
+        escapeCsv(p.brand || ''),
+        escapeCsv(p.unit_size),
+        (p.mrp_paise / 100).toFixed(2),
+        (p.shop_price_paise / 100).toFixed(2),
+        (p.selling_price_paise / 100).toFixed(2),
+        p.is_available ? 'true' : 'false',
+        p.is_active ? 'true' : 'false',
+      ];
+      lines.push(row.join(','));
+    }
+
+    const csvData = lines.join('\r\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="plukit-catalog-${new Date().toISOString().slice(0, 10)}.csv"`
+    );
+    return res.status(200).send(csvData);
+  } catch (err: any) {
+    console.error('Error exporting catalog CSV:', err);
+    return res.status(500).json({ error: 'Failed to export catalog CSV' });
   }
 });
 
@@ -882,6 +949,159 @@ adminProductsRouter.post('/bulk', async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error('Error in bulk product action:', err);
     return res.status(500).json({ error: 'Failed to perform bulk action' });
+  }
+});
+
+const importCsvSchema = z.object({
+  csvText: z.string().min(1, 'CSV content is required'),
+  dryRun: z.boolean().default(false),
+});
+
+/**
+ * POST /api/admin/products/import/csv
+ * Bulk import or price update with dry run validation and row-level error reporting.
+ */
+adminProductsRouter.post('/import/csv', async (req: Request, res: Response) => {
+  try {
+    const admin = (req as any).admin;
+    const parseResult = importCsvSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        error: parseResult.error.errors[0]?.message || 'Invalid CSV import request',
+      });
+    }
+
+    const { csvText, dryRun } = parseResult.data;
+
+    const [shops, categories] = await Promise.all([
+      prisma.shop.findMany({ select: { id: true, name: true } }),
+      prisma.category.findMany({ select: { id: true, name: true } }),
+    ]);
+
+    const shopMap = new Map<string, string>();
+    shops.forEach((s) => shopMap.set(s.name, s.id));
+
+    const categoryMap = new Map<string, string>();
+    categories.forEach((c) => categoryMap.set(c.name, c.id));
+
+    const csvValidation = validateAndParseProductCsv(
+      csvText,
+      new Set(shopMap.keys()),
+      new Set(categoryMap.keys())
+    );
+
+    if (!csvValidation.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'CSV validation failed with row-level errors',
+        errors: csvValidation.errors,
+      });
+    }
+
+    if (dryRun) {
+      return res.status(200).json({
+        success: true,
+        dryRun: true,
+        count: csvValidation.rows.length,
+        preview: csvValidation.rows.slice(0, 10),
+      });
+    }
+
+    // Apply import
+    let updatedCount = 0;
+    let createdCount = 0;
+
+    for (const row of csvValidation.rows) {
+      const shopId = shopMap.get(row.shopName)!;
+      const categoryId = categoryMap.get(row.categoryName)!;
+
+      const existing = await prisma.product.findUnique({
+        where: {
+          shop_id_name_unit_size: {
+            shop_id: shopId,
+            name: row.productName,
+            unit_size: row.unitSize,
+          },
+        },
+      });
+
+      if (existing) {
+        const priceChanged =
+          existing.mrp_paise !== row.mrpPaise ||
+          existing.shop_price_paise !== row.shopPricePaise ||
+          existing.selling_price_paise !== row.sellingPricePaise;
+
+        await prisma.product.update({
+          where: { id: existing.id },
+          data: {
+            brand: row.brand || null,
+            category_id: categoryId,
+            mrp_paise: row.mrpPaise,
+            shop_price_paise: row.shopPricePaise,
+            selling_price_paise: row.sellingPricePaise,
+          },
+        });
+
+        if (priceChanged) {
+          await prisma.priceHistory.create({
+            data: {
+              product_id: existing.id,
+              mrp_paise: row.mrpPaise,
+              shop_price_paise: row.shopPricePaise,
+              selling_price_paise: row.sellingPricePaise,
+            },
+          });
+        }
+        updatedCount++;
+      } else {
+        const created = await prisma.product.create({
+          data: {
+            shop_id: shopId,
+            category_id: categoryId,
+            name: row.productName,
+            brand: row.brand || null,
+            unit_size: row.unitSize,
+            mrp_paise: row.mrpPaise,
+            shop_price_paise: row.shopPricePaise,
+            selling_price_paise: row.sellingPricePaise,
+            is_available: true,
+            is_active: true,
+          },
+        });
+
+        await prisma.priceHistory.create({
+          data: {
+            product_id: created.id,
+            mrp_paise: row.mrpPaise,
+            shop_price_paise: row.shopPricePaise,
+            selling_price_paise: row.sellingPricePaise,
+          },
+        });
+        createdCount++;
+      }
+    }
+
+    catalogCache.invalidate();
+
+    await prisma.auditLog.create({
+      data: {
+        actor_id: admin.id,
+        action: 'PRODUCT_CSV_IMPORT',
+        entity: 'catalog',
+        entity_id: 'bulk',
+        new_value: { total: csvValidation.rows.length, createdCount, updatedCount },
+      },
+    }).catch(() => null);
+
+    return res.status(200).json({
+      success: true,
+      total: csvValidation.rows.length,
+      createdCount,
+      updatedCount,
+    });
+  } catch (err: any) {
+    console.error('Error importing catalog CSV:', err);
+    return res.status(500).json({ error: 'Failed to import catalog CSV' });
   }
 });
 

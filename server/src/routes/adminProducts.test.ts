@@ -651,5 +651,133 @@ describe('Phase C1: Admin Product List & Stock Toggles', () => {
       },
     });
   });
+
+  // Phase C4 Tests: Catalog CSV Export & Import
+  it('21. GET /api/admin/products/export/csv exports products in CSV format with required headers', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/products/export/csv`, {
+      headers: { Cookie: adminCookie },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/csv');
+    const csv = await res.text();
+    expect(csv).toContain('shop_name,category,product_name,brand,unit_size,mrp_rupees,shop_price_rupees');
+    const lines = csv.trim().split('\r\n');
+    expect(lines.length).toBeGreaterThan(1);
+  });
+
+  it('22. POST /api/admin/products/import/csv rejects unauthorized requests with HTTP 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/products/import/csv`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ csvText: 'dummy' }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('23. POST /api/admin/products/import/csv rejects customer sessions with HTTP 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/products/import/csv`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: customerCookie,
+      },
+      body: JSON.stringify({ csvText: 'dummy' }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('24. POST /api/admin/products/import/csv reports row-level errors on invalid CSV', async () => {
+    const invalidCsv = `shop_name,category,product_name,brand,unit_size,mrp_rupees,shop_price_rupees,selling_price_rupees
+Unknown Shop,Groceries,Test Milk,BrandX,500 ml,40.00,30.00,38.00
+[DUMMY] Green Valley Supermarket,Groceries,Bad Price,BrandY,1 kg,50.00,60.00,50.00`;
+
+    const res = await fetch(`${BASE_URL}/api/admin/products/import/csv`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: adminCookie,
+      },
+      body: JSON.stringify({ csvText: invalidCsv, dryRun: true }),
+    });
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.success).toBe(false);
+    expect(Array.isArray(data.errors)).toBe(true);
+
+    // Row 2 error: Unknown shop
+    const row2Err = data.errors.find((e: any) => e.row === 2);
+    expect(row2Err?.error).toContain("Unknown shop 'Unknown Shop'");
+
+    // Row 3 error: Shop price > MRP
+    const row3Err = data.errors.find((e: any) => e.row === 3);
+    expect(row3Err?.error).toContain('exceeds printed MRP');
+  });
+
+  it('25. POST /api/admin/products/import/csv dryRun returns preview without modifying database', async () => {
+    const shop = await prisma.shop.findFirst({ where: { status: 'ACTIVE' } });
+    const category = await prisma.category.findFirst({ where: { is_active: true } });
+
+    const testProductName = `DryRun Only Product ${Date.now()}`;
+    const validCsv = `shop_name,category,product_name,brand,unit_size,mrp_rupees,shop_price_rupees,selling_price_rupees
+"${shop!.name}","${category!.name}","${testProductName}","BrandZ","500 g",100.00,80.00,95.00`;
+
+    const res = await fetch(`${BASE_URL}/api/admin/products/import/csv`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: adminCookie,
+      },
+      body: JSON.stringify({ csvText: validCsv, dryRun: true }),
+    });
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.dryRun).toBe(true);
+    expect(data.count).toBe(1);
+
+    // Confirm product was NOT created in DB
+    const inDb = await prisma.product.findFirst({ where: { name: testProductName } });
+    expect(inDb).toBeNull();
+  });
+
+  it('26. POST /api/admin/products/import/csv imports products, updates prices, and records price history', async () => {
+    const shop = await prisma.shop.findFirst({ where: { status: 'ACTIVE' } });
+    const category = await prisma.category.findFirst({ where: { is_active: true } });
+
+    const importName = `Imported Catalog Item ${Date.now()}`;
+    const validCsv = `shop_name,category,product_name,brand,unit_size,mrp_rupees,shop_price_rupees,selling_price_rupees
+"${shop!.name}","${category!.name}","${importName}","ImportBrand","1 kg",200.00,160.00,190.00`;
+
+    const res = await fetch(`${BASE_URL}/api/admin/products/import/csv`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: adminCookie,
+      },
+      body: JSON.stringify({ csvText: validCsv, dryRun: false }),
+    });
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.total).toBe(1);
+    expect(data.createdCount).toBe(1);
+
+    // Verify in DB
+    const created = await prisma.product.findFirst({
+      where: { name: importName },
+      include: { price_history: true },
+    });
+    expect(created).toBeDefined();
+    expect(created!.selling_price_paise).toBe(19000); // ₹190
+    expect(created!.price_history.length).toBeGreaterThan(0);
+
+    // Clean up created product to keep catalog count clean
+    await prisma.priceHistory.deleteMany({ where: { product_id: created!.id } });
+    await prisma.product.delete({ where: { id: created!.id } });
+  });
 });
 

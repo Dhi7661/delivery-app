@@ -82,7 +82,8 @@ const REQUIRED_HEADERS = [
 ];
 
 /**
- * Parses and validates CSV rows according to F07 rules.
+ * Parses and validates CSV rows according to F07 and Section 10 rules.
+ * Supports optional selling_price_rupees column (defaults to mrp_rupees if omitted).
  */
 export function validateAndParseProductCsv(
   csvText: string,
@@ -116,6 +117,12 @@ export function validateAndParseProductCsv(
     }
   }
 
+  // Optional header: selling_price_rupees
+  const sellingIdx = header.indexOf('selling_price_rupees');
+  if (sellingIdx !== -1) {
+    headerIndices['selling_price_rupees'] = sellingIdx;
+  }
+
   if (errors.length > 0) {
     return {
       success: false,
@@ -135,6 +142,10 @@ export function validateAndParseProductCsv(
     const unitSize = rawCols[headerIndices['unit_size']] || '';
     const mrpStr = rawCols[headerIndices['mrp_rupees']] || '';
     const shopPriceStr = rawCols[headerIndices['shop_price_rupees']] || '';
+    const sellingPriceStr =
+      headerIndices['selling_price_rupees'] !== undefined
+        ? rawCols[headerIndices['selling_price_rupees']] || ''
+        : '';
 
     // Check missing fields
     if (!shopName) errors.push({ row: rowNum, error: "Missing required field 'shop_name'" });
@@ -156,6 +167,7 @@ export function validateAndParseProductCsv(
 
     let mrpPaise = 0;
     let shopPricePaise = 0;
+    let sellingPricePaise = 0;
 
     // Parse MRP
     if (mrpStr) {
@@ -181,11 +193,39 @@ export function validateAndParseProductCsv(
       }
     }
 
-    // Shop price above MRP rule
+    // Parse Selling Price (defaults to mrpPaise)
+    if (sellingPriceStr) {
+      try {
+        sellingPricePaise = parseRupeesToPaise(sellingPriceStr);
+        if (sellingPricePaise <= 0) {
+          errors.push({ row: rowNum, error: 'Selling price must be greater than zero' });
+        }
+      } catch (err: any) {
+        errors.push({ row: rowNum, error: `Invalid selling_price_rupees: ${err.message}` });
+      }
+    } else {
+      sellingPricePaise = mrpPaise;
+    }
+
+    // Legal pricing rules: shop_price <= selling_price <= MRP
     if (mrpPaise > 0 && shopPricePaise > 0 && shopPricePaise > mrpPaise) {
       errors.push({
         row: rowNum,
-        error: `Shop price (${shopPriceStr}) exceeds printed MRP (${mrpStr})`,
+        error: `Shop price (₹${shopPriceStr}) exceeds printed MRP (₹${mrpStr})`,
+      });
+    }
+
+    if (mrpPaise > 0 && sellingPricePaise > 0 && sellingPricePaise > mrpPaise) {
+      errors.push({
+        row: rowNum,
+        error: `Selling price (₹${sellingPriceStr || mrpStr}) exceeds printed MRP (₹${mrpStr})`,
+      });
+    }
+
+    if (shopPricePaise > 0 && sellingPricePaise > 0 && sellingPricePaise < shopPricePaise) {
+      errors.push({
+        row: rowNum,
+        error: `Selling price (₹${sellingPriceStr || mrpStr}) is lower than shop buy price (₹${shopPriceStr})`,
       });
     }
 
@@ -199,7 +239,7 @@ export function validateAndParseProductCsv(
         unitSize,
         mrpPaise,
         shopPricePaise,
-        sellingPricePaise: mrpPaise, // standard customer selling price is MRP
+        sellingPricePaise,
       });
     }
   }
