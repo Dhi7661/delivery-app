@@ -181,13 +181,13 @@ riderAuthRouter.post('/delivery/auth/otp/send', async (req: Request, res: Respon
     });
 
     // Send SMS
-    await sendOtpSms(phone, otp);
+    const smsResult = await sendOtpSms(phone, otp);
 
     return res.status(200).json({
       success: true,
       message: 'OTP sent successfully to rider',
       phone: maskPhone(phone),
-      ...(process.env.NODE_ENV === 'test' ? { debugOtp: otp } : {}),
+      ...(smsResult.debugOtp ? { debugOtp: smsResult.debugOtp } : {}),
     });
   } catch (error: any) {
     console.error('Rider OTP send error:', error);
