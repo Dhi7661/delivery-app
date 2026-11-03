@@ -7,13 +7,12 @@ import { prisma } from '../lib/db.js';
 import { seedCatalog } from '../../prisma/seed.js';
 import app from '../index.js';
 import { resetAllRateLimits, createRateLimiter } from '../lib/rateLimit.js';
-import { ADMIN_COOKIE_NAME } from './admin.js';
+
 import { AUTH_COOKIE_NAME } from './auth.js';
 import express from 'express';
 
 let server: Server;
 let BASE_URL: string;
-let adminToken: string;
 let customerAToken: string;
 let customerBToken: string;
 let customerAId: string;
@@ -32,26 +31,6 @@ describe('F19: Legal Pages and Security Hardening', () => {
         }
         resolve();
       });
-    });
-
-    // 1. Create Admin User & Session
-    const adminEmail = `f19-admin-${Date.now()}@plukit.test`;
-    const hashedAdminPw = await bcrypt.hash('AdminSecret123!', 10);
-    const admin = await prisma.adminUser.create({
-      data: {
-        email: adminEmail,
-        name: 'Hardening Admin',
-        password_hash: hashedAdminPw,
-      },
-    });
-
-    adminToken = `f19-adm-token-${Date.now()}`;
-    await prisma.adminSession.create({
-      data: {
-        admin_user_id: admin.id,
-        token: adminToken,
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      },
     });
 
     // 2. Create Customer A & Session
@@ -180,36 +159,7 @@ describe('F19: Legal Pages and Security Hardening', () => {
     });
   });
 
-  describe('2. Admin Route Protection & Customer Authorization', () => {
-    it('rejects unauthenticated requests to admin endpoints with HTTP 401', async () => {
-      const res = await fetch(`${BASE_URL}/api/admin/orders`);
-      expect(res.status).toBe(401);
-      const data = await res.json();
-      expect(data.error).toContain('Admin authentication required');
-    });
-
-    it('rejects customer tokens attempting to access admin endpoints with HTTP 401', async () => {
-      const res = await fetch(`${BASE_URL}/api/admin/orders`, {
-        headers: {
-          Cookie: `${AUTH_COOKIE_NAME}=${customerAToken}`,
-        },
-      });
-      expect(res.status).toBe(401);
-    });
-
-    it('allows authenticated admin to access admin routes with HTTP 200', async () => {
-      const res = await fetch(`${BASE_URL}/api/admin/orders`, {
-        headers: {
-          Cookie: `${ADMIN_COOKIE_NAME}=${adminToken}`,
-        },
-      });
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expect(data.orders).toBeDefined();
-    });
-  });
-
-  describe('3. Customer Order Ownership Isolation', () => {
+describe('3. Customer Order Ownership Isolation', () => {
     it('allows Customer A to view their own order with HTTP 200', async () => {
       const res = await fetch(`${BASE_URL}/api/orders/${orderAOrderNo}`, {
         headers: {

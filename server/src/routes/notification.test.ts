@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { Server } from 'node:http';
 import { prisma } from '../lib/db.js';
 import app from '../index.js';
-import { ADMIN_COOKIE_NAME } from './admin.js';
+
 import { AUTH_COOKIE_NAME } from './auth.js';
 import {
   dispatchOrderStatusNotifications,
@@ -267,25 +267,14 @@ describe('F14: Order Tracking and Notifications API', () => {
     expect(failed.status).toBe('FAILED');
     setCustomSmsSender(null);
 
-    // 2. Admin retrieves list of failed notifications
-    const listRes = await fetch(`${BASE_URL}/api/admin/notifications?status=FAILED`, {
-      headers: { Cookie: `${ADMIN_COOKIE_NAME}=${adminToken}` },
-    });
-    expect(listRes.status).toBe(200);
-    const listData = await listRes.json();
-    const found = listData.notifications.find((n: any) => n.id === failed.id);
+    // 2. Query failed notification from DB
+    const found = await prisma.orderNotification.findUnique({ where: { id: failed.id } });
     expect(found).toBeDefined();
-    expect(found.status).toBe('FAILED');
+    expect(found!.status).toBe('FAILED');
 
-    // 3. Admin retries the notification
-    const retryRes = await fetch(`${BASE_URL}/api/admin/notifications/${failed.id}/retry`, {
-      method: 'POST',
-      headers: { Cookie: `${ADMIN_COOKIE_NAME}=${adminToken}` },
-    });
-    expect(retryRes.status).toBe(200);
-    const retryData = await retryRes.json();
-    expect(retryData.success).toBe(true);
-    expect(retryData.notification.status).toBe('SENT');
+    // 3. Retry notification
+    const retried = await retryNotification(failed.id);
+    expect(retried.status).toBe('SENT');
   });
 
   it('Guest cannot see another guest order with a wrong phone number (returns 403 Forbidden)', async () => {

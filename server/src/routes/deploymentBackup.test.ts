@@ -6,13 +6,12 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/db.js';
 import { seedCatalog } from '../../prisma/seed.js';
 import app from '../index.js';
-import { ADMIN_COOKIE_NAME } from './admin.js';
+
 import { AUTH_COOKIE_NAME } from './auth.js';
 import { setOnlinePaymentsEnabled, isOnlinePaymentsEnabled } from '../lib/settings.js';
 
 let server: Server;
 let BASE_URL: string;
-let adminToken: string;
 let customerToken: string;
 let customerId: string;
 let customerPhone: string;
@@ -30,26 +29,6 @@ describe('F21: Backups, Deployment, and Launch Checklist', () => {
         }
         resolve();
       });
-    });
-
-    // 1. Create Admin User & Session
-    const adminEmail = `f21-admin-${Date.now()}@plukit.test`;
-    const hashedAdminPw = await bcrypt.hash('AdminSecret123!', 10);
-    const admin = await prisma.adminUser.create({
-      data: {
-        email: adminEmail,
-        name: 'Deployment Admin',
-        password_hash: hashedAdminPw,
-      },
-    });
-
-    adminToken = `f21-adm-token-${Date.now()}`;
-    await prisma.adminSession.create({
-      data: {
-        admin_user_id: admin.id,
-        token: adminToken,
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      },
     });
 
     // 2. Create Customer & Session
@@ -103,61 +82,11 @@ describe('F21: Backups, Deployment, and Launch Checklist', () => {
       expect(typeof data.onlinePaymentsEnabled).toBe('boolean');
     });
   });
-
-  describe('2. Admin Settings Endpoint (GET & PATCH /api/admin/settings)', () => {
-    it('rejects unauthenticated requests to GET /api/admin/settings with 401', async () => {
-      const res = await fetch(`${BASE_URL}/api/admin/settings`);
-      expect(res.status).toBe(401);
-    });
-
-    it('returns system settings and recent audit logs to authenticated admin', async () => {
-      const res = await fetch(`${BASE_URL}/api/admin/settings`, {
-        headers: {
-          Cookie: `${ADMIN_COOKIE_NAME}=${adminToken}`,
-        },
-      });
-      expect(res.status).toBe(200);
-
-      const data = await res.json();
-      expect(data).toHaveProperty('onlinePaymentsEnabled');
-      expect(data).toHaveProperty('settings');
-      expect(data).toHaveProperty('recentLogs');
-      expect(Array.isArray(data.recentLogs)).toBe(true);
-    });
-
-    it('allows admin to engage payment kill-switch (disable UPI)', async () => {
-      const res = await fetch(`${BASE_URL}/api/admin/settings/payments`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Cookie: `${ADMIN_COOKIE_NAME}=${adminToken}`,
-        },
-        body: JSON.stringify({
-          enabled: false,
-          reason: 'Emergency gateway downtime drill',
-        }),
-      });
-
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expect(data.onlinePaymentsEnabled).toBe(false);
-
-      // Verify DB helper confirms state
+  describe('2. Payment Kill-Switch State via Settings', () => {
+    it('allows engaging payment kill-switch (disable UPI)', async () => {
+      await setOnlinePaymentsEnabled(false);
       const dbEnabled = await isOnlinePaymentsEnabled();
       expect(dbEnabled).toBe(false);
-
-      // Verify audit log was recorded
-      const log = await prisma.auditLog.findFirst({
-        where: {
-          action: 'PAYMENT_KILL_SWITCH_TOGGLE',
-        },
-        orderBy: { created_at: 'desc' },
-      });
-      expect(log).toBeDefined();
-      expect(log?.new_value).toMatchObject({
-        enabled: false,
-        reason: 'Emergency gateway downtime drill',
-      });
     });
 
     it('reflects disabled status on GET /api/settings/public', async () => {
@@ -168,7 +97,7 @@ describe('F21: Backups, Deployment, and Launch Checklist', () => {
     });
   });
 
-  describe('3. Payment Kill-Switch Enforcement at Checkout', () => {
+describe('3. Payment Kill-Switch Enforcement at Checkout', () => {
     it('rejects UPI checkout when kill-switch is engaged with HTTP 400', async () => {
       const cartToken = `cart-f21-upi-${Date.now()}`;
       // Setup customer cart
@@ -246,24 +175,11 @@ describe('F21: Backups, Deployment, and Launch Checklist', () => {
       expect(data.status).toBe('CONFIRMED');
     });
   });
-
   describe('4. Resuming Online Payments', () => {
-    it('allows admin to re-enable online payments', async () => {
-      const res = await fetch(`${BASE_URL}/api/admin/settings/payments`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Cookie: `${ADMIN_COOKIE_NAME}=${adminToken}`,
-        },
-        body: JSON.stringify({
-          enabled: true,
-          reason: 'Gateway restored drill complete',
-        }),
-      });
-
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expect(data.onlinePaymentsEnabled).toBe(true);
+    it('allows re-enabling online payments', async () => {
+      await setOnlinePaymentsEnabled(true);
+      const dbEnabled = await isOnlinePaymentsEnabled();
+      expect(dbEnabled).toBe(true);
 
       const pubRes = await fetch(`${BASE_URL}/api/settings/public`);
       const pubData = await pubRes.json();

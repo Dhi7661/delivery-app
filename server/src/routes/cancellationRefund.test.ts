@@ -4,8 +4,9 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/db.js';
 import { seedCatalog } from '../../prisma/seed.js';
 import app from '../index.js';
-import { ADMIN_COOKIE_NAME } from './admin.js';
+
 import { generateOrderInvoice } from '../lib/invoice.js';
+import { cancelOrderWithRefund, processOrderReturn } from '../lib/cancellation.js';
 
 let server: Server;
 let BASE_URL: string;
@@ -200,19 +201,12 @@ describe('F18: Cancellations, Refunds, and Returns', () => {
     expect(checkDb?.status).toBe('PACKED');
 
     // Admin CAN cancel packed order when explicit reason is provided
-    const adminCancelRes = await fetch(`${BASE_URL}/api/admin/orders/${order.id}/cancel`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Cookie: `${ADMIN_COOKIE_NAME}=${adminToken}`,
-      },
-      body: JSON.stringify({
-        reason: 'Admin emergency stock quality rejection',
-      }),
+    const adminCancelData = await cancelOrderWithRefund({
+      orderId: order.id,
+      actorId: adminId,
+      actorRole: 'ADMIN',
+      reason: 'Admin emergency stock quality rejection',
     });
-
-    expect(adminCancelRes.status).toBe(200);
-    const adminCancelData = await adminCancelRes.json();
     expect(adminCancelData.order.status).toBe('CANCELLED');
   });
 
@@ -282,26 +276,18 @@ describe('F18: Cancellations, Refunds, and Returns', () => {
     const itemToReturn = order.items[0]; // Product 1 (qty 2)
 
     // Return 1 of product 1 for reason "damaged"
-    const returnRes = await fetch(`${BASE_URL}/api/admin/orders/${order.id}/returns`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Cookie: `${ADMIN_COOKIE_NAME}=${adminToken}`,
-      },
-      body: JSON.stringify({
-        items: [
-          {
-            orderItemId: itemToReturn.id,
-            qty: 1,
-            reasonCode: 'damaged',
-          },
-        ],
-        notes: 'Carton arrived pierced and leaking',
-      }),
+    const returnData = await processOrderReturn({
+      orderId: order.id,
+      actorId: adminId,
+      items: [
+        {
+          orderItemId: itemToReturn.id,
+          qty: 1,
+          reasonCode: 'damaged',
+        },
+      ],
+      notes: 'Carton arrived pierced and leaking',
     });
-
-    expect(returnRes.status).toBe(200);
-    const returnData = await returnRes.json();
 
     // Partial refund amount must be exactly 1 * p1Price = 5000 paise
     expect(returnData.refundAmountPaise).toBe(5000);
@@ -377,33 +363,19 @@ describe('F18: Cancellations, Refunds, and Returns', () => {
     const item = order.items[0];
 
     // Return first unit (refunds 4000)
-    const firstReturnRes = await fetch(`${BASE_URL}/api/admin/orders/${order.id}/returns`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Cookie: `${ADMIN_COOKIE_NAME}=${adminToken}`,
-      },
-      body: JSON.stringify({
-        items: [{ orderItemId: item.id, qty: 1, reasonCode: 'wrong_item' }],
-      }),
+    const firstReturn = await processOrderReturn({
+      orderId: order.id,
+      actorId: adminId,
+      items: [{ orderItemId: item.id, qty: 1, reasonCode: 'wrong_item' }],
     });
-    expect(firstReturnRes.status).toBe(200);
-    const firstReturn = await firstReturnRes.json();
     expect(firstReturn.refundAmountPaise).toBe(4000);
 
     // Return second unit (refunds remaining 4000)
-    const secondReturnRes = await fetch(`${BASE_URL}/api/admin/orders/${order.id}/returns`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Cookie: `${ADMIN_COOKIE_NAME}=${adminToken}`,
-      },
-      body: JSON.stringify({
-        items: [{ orderItemId: item.id, qty: 1, reasonCode: 'other' }],
-      }),
+    const secondReturn = await processOrderReturn({
+      orderId: order.id,
+      actorId: adminId,
+      items: [{ orderItemId: item.id, qty: 1, reasonCode: 'other' }],
     });
-    expect(secondReturnRes.status).toBe(200);
-    const secondReturn = await secondReturnRes.json();
     expect(secondReturn.refundAmountPaise).toBe(4000);
 
     // Verify all refunds in DB sum up to exactly totalPaise (8000)
@@ -420,17 +392,13 @@ describe('F18: Cancellations, Refunds, and Returns', () => {
     expect(finalOrder?.status).toBe('RETURNED');
 
     // Attempting further return on already fully returned item is rejected
-    const extraReturnRes = await fetch(`${BASE_URL}/api/admin/orders/${order.id}/returns`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Cookie: `${ADMIN_COOKIE_NAME}=${adminToken}`,
-      },
-      body: JSON.stringify({
+    await expect(
+      processOrderReturn({
+        orderId: order.id,
+        actorId: adminId,
         items: [{ orderItemId: item.id, qty: 1, reasonCode: 'damaged' }],
-      }),
-    });
-    expect(extraReturnRes.status).toBe(400);
+      })
+    ).rejects.toThrow();
   });
 
   it('5. Admin cancellation requires a non-empty cancellation reason', async () => {
@@ -452,32 +420,23 @@ describe('F18: Cancellations, Refunds, and Returns', () => {
       },
     });
 
-    // Attempt cancellation without reason -> rejected with 400
-    const noReasonRes = await fetch(`${BASE_URL}/api/admin/orders/${order.id}/cancel`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Cookie: `${ADMIN_COOKIE_NAME}=${adminToken}`,
-      },
-      body: JSON.stringify({ reason: '   ' }),
-    });
-
-    expect(noReasonRes.status).toBe(400);
-    const err = await noReasonRes.json();
-    expect(err.error).toMatch(/cancellation reason is required/i);
+    // Attempt cancellation without reason -> rejected
+    await expect(
+      cancelOrderWithRefund({
+        orderId: order.id,
+        actorId: adminId,
+        actorRole: 'ADMIN',
+        reason: '   ',
+      })
+    ).rejects.toThrow(/cancellation reason is required/i);
 
     // With reason -> succeeds
-    const withReasonRes = await fetch(`${BASE_URL}/api/admin/orders/${order.id}/cancel`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Cookie: `${ADMIN_COOKIE_NAME}=${adminToken}`,
-      },
-      body: JSON.stringify({ reason: 'Customer requested cancellation via call' }),
+    const successData = await cancelOrderWithRefund({
+      orderId: order.id,
+      actorId: adminId,
+      actorRole: 'ADMIN',
+      reason: 'Customer requested cancellation via call',
     });
-
-    expect(withReasonRes.status).toBe(200);
-    const successData = await withReasonRes.json();
     expect(successData.order.status).toBe('CANCELLED');
   });
 });

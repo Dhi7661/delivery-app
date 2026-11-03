@@ -3,7 +3,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { prisma } from '../lib/db.js';
 import { getAuthenticatedUser } from './auth.js';
-import { getAuthenticatedAdmin } from './admin.js';
 import { normalizePhone } from '../lib/notifications.js';
 import {
   generateOrderInvoice,
@@ -19,7 +18,6 @@ export const invoiceRouter = Router();
  * GET /api/orders/:orderNo/invoice
  * Returns invoice JSON and metadata for an order.
  * Ownership and authorization rules:
- * - Admin can always view.
  * - Logged-in customer can view their own order.
  * - Guest with matching phone query parameter can view.
  * - Other users receive 403 Forbidden.
@@ -47,26 +45,23 @@ invoiceRouter.get('/orders/:orderNo/invoice', async (req: Request, res: Response
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    // Authorization check
-    const adminUser = await getAuthenticatedAdmin(req);
+    // Customer & Guest Authorization check
     const authUser = await getAuthenticatedUser(req);
     const orderPhone = normalizePhone(order.guest_phone || order.user?.phone || '');
 
-    if (!adminUser) {
-      if (authUser) {
-        const isOwner =
-          (order.user_id && order.user_id === authUser.id) ||
-          (orderPhone && normalizePhone(authUser.phone) === orderPhone);
-        if (!isOwner) {
-          return res.status(403).json({ error: 'You do not have permission to view this invoice.' });
-        }
-      } else if (queryPhone) {
-        if (normalizePhone(queryPhone) !== orderPhone) {
-          return res.status(403).json({ error: 'Phone number does not match this order.' });
-        }
-      } else {
-        return res.status(403).json({ error: 'Authentication or phone verification required to view invoice.' });
+    if (authUser) {
+      const isOwner =
+        (order.user_id && order.user_id === authUser.id) ||
+        (orderPhone && normalizePhone(authUser.phone) === orderPhone);
+      if (!isOwner) {
+        return res.status(403).json({ error: 'You do not have permission to view this invoice.' });
       }
+    } else if (queryPhone) {
+      if (normalizePhone(queryPhone) !== orderPhone) {
+        return res.status(403).json({ error: 'Phone number does not match this order.' });
+      }
+    } else {
+      return res.status(403).json({ error: 'Authentication or phone verification required to view invoice.' });
     }
 
     if (!order.invoice) {

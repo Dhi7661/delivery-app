@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { Server } from 'node:http';
 import { prisma } from '../lib/db.js';
 import app from '../index.js';
-import { ADMIN_COOKIE_NAME } from './admin.js';
+
 import { AUTH_COOKIE_NAME } from './auth.js';
 import {
   getFinancialYear,
