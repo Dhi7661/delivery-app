@@ -375,7 +375,7 @@ function OrdersBoardContent() {
     return (
       <div
         key={order.id}
-        className={`p-4 rounded-2xl bg-white border border-gray-200 shadow-xs space-y-3 transition-all hover:border-gray-300 ${
+        className={`w-full max-w-full p-3.5 rounded-2xl bg-white border border-gray-200 shadow-xs space-y-3 transition-all hover:border-gray-300 ${
           isCodUnconfirmed ? "ring-2 ring-amber-400/50" : ""
         }`}
       >
@@ -383,23 +383,26 @@ function OrdersBoardContent() {
         <div className="flex items-center justify-between gap-2 border-b border-gray-100 pb-2.5">
           <button
             onClick={() => setSelectedOrder(order)}
-            className="text-xs font-black text-gray-900 hover:text-emerald-700 underline flex items-center gap-1"
-            title="Click to view full order details"
+            className="text-xs font-black text-gray-900 hover:text-emerald-700 underline truncate max-w-[170px] text-left whitespace-nowrap"
+            title={`Order #${order.order_no} - click to view details`}
           >
             #{order.order_no}
           </button>
-          <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap">
+          <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap shrink-0">
             {new Date(order.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
           </span>
         </div>
 
         {/* Customer Information */}
         <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-800">{order.customer_name}</span>
+          <p className="text-xs font-bold text-gray-800 truncate" title={order.customer_name}>
+            {order.customer_name}
+          </p>
+          <div>
             <a
               href={`tel:${order.customer_phone}`}
-              className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 min-h-[30px]"
+              className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1 min-h-[28px]"
+              title={`Call ${order.customer_phone}`}
             >
               📞 {order.customer_phone}
             </a>
@@ -449,10 +452,10 @@ function OrdersBoardContent() {
         <div className="space-y-2 pt-1 border-t border-gray-100">
           {renderActionButton(order)}
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setSelectedOrder(order)}
-              className="flex-1 py-1.5 px-2 rounded-lg border border-gray-200 text-[11px] font-bold text-gray-600 hover:bg-gray-50 min-h-[36px]"
+              className="flex-1 min-w-[120px] py-1.5 px-2 rounded-lg border border-gray-200 text-[11px] font-bold text-gray-600 hover:bg-gray-50 min-h-[36px]"
             >
               Items / Availability
             </button>
