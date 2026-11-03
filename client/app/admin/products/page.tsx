@@ -241,10 +241,6 @@ export default function AdminProductsPage() {
 
           <Link
             href="/admin/products/new"
-            onClick={(e) => {
-              e.preventDefault();
-              alert("Add Product Form will be built in Phase C2.");
-            }}
             className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs transition-colors min-h-[44px] flex items-center gap-1.5"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

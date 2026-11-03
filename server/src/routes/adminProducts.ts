@@ -137,6 +137,302 @@ adminProductsRouter.get('/', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/admin/products/meta
+ * Returns active categories and shops for form dropdowns.
+ */
+adminProductsRouter.get('/meta', async (_req: Request, res: Response) => {
+  try {
+    const [categories, shops] = await Promise.all([
+      prisma.category.findMany({
+        where: { is_active: true },
+        select: { id: true, name: true },
+        orderBy: { sort_order: 'asc' },
+      }),
+      prisma.shop.findMany({
+        where: { status: 'ACTIVE' },
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      }),
+    ]);
+
+    return res.status(200).json({ categories, shops });
+  } catch (err: any) {
+    console.error('Error fetching admin products meta:', err);
+    return res.status(500).json({ error: 'Failed to fetch categories and shops' });
+  }
+});
+
+/**
+ * Helper to validate image format from binary magic bytes (Section 10.2).
+ * Rejects SVG and any formats other than JPG, PNG, WebP. Enforces 5MB limit.
+ */
+function validateImageBuffer(buffer: Buffer): { valid: boolean; format?: string; error?: string } {
+  if (buffer.length > 5 * 1024 * 1024) {
+    return { valid: false, error: 'Photo must not exceed 5 MB' };
+  }
+
+  // JPEG magic bytes: FF D8 FF
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return { valid: true, format: 'jpeg' };
+  }
+
+  // PNG magic bytes: 89 50 4E 47
+  if (
+    buffer.length >= 4 &&
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47
+  ) {
+    return { valid: true, format: 'png' };
+  }
+
+  // WebP magic bytes: RIFF....WEBP
+  if (
+    buffer.length >= 12 &&
+    buffer.subarray(0, 4).toString('ascii') === 'RIFF' &&
+    buffer.subarray(8, 12).toString('ascii') === 'WEBP'
+  ) {
+    return { valid: true, format: 'webp' };
+  }
+
+  return {
+    valid: false,
+    error: 'Only JPG, PNG, and WebP images are permitted. SVG and other formats are rejected.',
+  };
+}
+
+const createProductSchema = z.object({
+  name: z.string().trim().min(1, 'Product name is required'),
+  brand: z.string().trim().optional().nullable(),
+  unit_size: z.string().trim().min(1, 'Unit size is required (e.g. 500 g, 1 L)'),
+  category_id: z.string().min(1, 'Category is required'),
+  shop_id: z.string().min(1, 'Partner shop is required'),
+  mrp_paise: z.number().int().positive('Printed MRP must be a positive integer in paise'),
+  shop_price_paise: z.number().int().positive('Shop buy price must be a positive integer in paise'),
+  selling_price_paise: z.number().int().positive('Selling price must be a positive integer in paise'),
+  hsn_code: z.string().trim().optional().nullable(),
+  gst_rate: z.number().min(0).max(100).default(0.0),
+  is_available: z.boolean().default(true),
+  is_active: z.boolean().default(true),
+  sku: z.string().trim().optional().nullable(),
+  barcode: z.string().trim().optional().nullable(),
+  photo_base64: z.string().optional().nullable(),
+});
+
+/**
+ * POST /api/admin/products
+ * Creates a new product with full validation, legal pricing rules, and initial price history.
+ */
+adminProductsRouter.post('/', async (req: Request, res: Response) => {
+  try {
+    const admin = (req as any).admin;
+    const parseResult = createProductSchema.safeParse(req.body);
+
+    if (!parseResult.success) {
+      return res.status(400).json({
+        error: parseResult.error.errors[0]?.message || 'Invalid product data',
+      });
+    }
+
+    const {
+      name,
+      brand,
+      unit_size,
+      category_id,
+      shop_id,
+      mrp_paise,
+      shop_price_paise,
+      selling_price_paise,
+      hsn_code,
+      gst_rate,
+      is_available,
+      is_active,
+      sku,
+      barcode,
+      photo_base64,
+    } = parseResult.data;
+
+    // Validate photo content if provided
+    if (photo_base64) {
+      const cleanBase64 = photo_base64.replace(/^data:image\/[a-z0-9+]+;base64,/, '');
+      const photoBuffer = Buffer.from(cleanBase64, 'base64');
+      const imgValidation = validateImageBuffer(photoBuffer);
+      if (!imgValidation.valid) {
+        return res.status(400).json({ error: imgValidation.error });
+      }
+    }
+
+    // Business rule: Selling price cannot exceed MRP
+    if (selling_price_paise > mrp_paise) {
+      return res.status(400).json({
+        error: `Selling price (₹${(selling_price_paise / 100).toFixed(2)}) cannot exceed printed MRP (₹${(mrp_paise / 100).toFixed(2)}).`,
+      });
+    }
+
+    // Business rule: Selling price cannot be lower than buy price
+    if (selling_price_paise < shop_price_paise) {
+      return res.status(400).json({
+        error: `Selling price (₹${(selling_price_paise / 100).toFixed(2)}) cannot be lower than shop buy price (₹${(shop_price_paise / 100).toFixed(2)}).`,
+      });
+    }
+
+    // Foreign key check: Category
+    const category = await prisma.category.findUnique({
+      where: { id: category_id },
+    });
+    if (!category) {
+      return res.status(400).json({ error: 'Selected category does not exist' });
+    }
+
+    // Foreign key check: Partner Shop
+    const shop = await prisma.shop.findUnique({
+      where: { id: shop_id },
+    });
+    if (!shop) {
+      return res.status(400).json({ error: 'Selected partner shop does not exist' });
+    }
+
+    // Uniqueness check: [shop_id, name, unit_size]
+    const existing = await prisma.product.findUnique({
+      where: {
+        shop_id_name_unit_size: {
+          shop_id,
+          name,
+          unit_size,
+        },
+      },
+    });
+
+    if (existing) {
+      return res.status(409).json({
+        error: `A product named "${name}" with unit size "${unit_size}" already exists for this shop.`,
+      });
+    }
+
+    const codeValue = hsn_code || sku || barcode || null;
+
+    // Execute product creation and price history atomically
+    const [newProduct] = await prisma.$transaction([
+      prisma.product.create({
+        data: {
+          shop_id,
+          category_id,
+          name,
+          brand: brand || null,
+          unit_size,
+          hsn_code: codeValue,
+          gst_rate: gst_rate || 0.0,
+          mrp_paise,
+          shop_price_paise,
+          selling_price_paise,
+          is_available: is_available ?? true,
+          is_active: is_active ?? true,
+        },
+        include: {
+          category: { select: { id: true, name: true } },
+          shop: { select: { id: true, name: true } },
+        },
+      }),
+      // We will create priceHistory in the second step after product creation
+    ]);
+
+    // Create initial price history
+    await prisma.priceHistory.create({
+      data: {
+        product_id: newProduct.id,
+        mrp_paise,
+        shop_price_paise,
+        selling_price_paise,
+      },
+    });
+
+    // Invalidate customer storefront cache immediately
+    catalogCache.invalidate();
+
+    // Audit log
+    await prisma.auditLog.create({
+      data: {
+        actor_id: admin.id,
+        action: 'PRODUCT_CREATE',
+        entity: 'product',
+        entity_id: newProduct.id,
+        new_value: {
+          name: newProduct.name,
+          shop_id: newProduct.shop_id,
+          mrp_paise,
+          shop_price_paise,
+          selling_price_paise,
+        },
+      },
+    }).catch(() => null);
+
+    const marginPaise = newProduct.selling_price_paise - newProduct.shop_price_paise;
+    const marginPct =
+      newProduct.selling_price_paise > 0
+        ? Math.round((marginPaise / newProduct.selling_price_paise) * 1000) / 10
+        : 0;
+
+    return res.status(201).json({
+      success: true,
+      product: {
+        ...newProduct,
+        margin_paise: marginPaise,
+        margin_pct: marginPct,
+        is_low_margin: marginPct < 10,
+      },
+    });
+  } catch (err: any) {
+    console.error('Error creating product:', err);
+    return res.status(500).json({ error: 'Failed to create product' });
+  }
+});
+
+/**
+ * GET /api/admin/products/:id
+ * Retrieve single product details with price history.
+ */
+adminProductsRouter.get('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const product = await prisma.product.findUnique({
+      where: { id },
+      include: {
+        category: { select: { id: true, name: true } },
+        shop: { select: { id: true, name: true } },
+        price_history: {
+          orderBy: { effective_from: 'desc' },
+          take: 20,
+        },
+      },
+    });
+
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    const marginPaise = product.selling_price_paise - product.shop_price_paise;
+    const marginPct =
+      product.selling_price_paise > 0
+        ? Math.round((marginPaise / product.selling_price_paise) * 1000) / 10
+        : 0;
+
+    return res.status(200).json({
+      product: {
+        ...product,
+        margin_paise: marginPaise,
+        margin_pct: marginPct,
+        is_low_margin: marginPct < 10,
+      },
+    });
+  } catch (err: any) {
+    console.error('Error fetching product by id:', err);
+    return res.status(500).json({ error: 'Failed to retrieve product' });
+  }
+});
+
+/**
  * PATCH /api/admin/products/:id/toggle-stock
  * Toggles product stock availability (is_available).
  */

@@ -315,5 +315,201 @@ describe('Phase C1: Admin Product List & Stock Toggles', () => {
       }),
     });
   });
+
+  // Phase C2 Tests: Add Product & Meta
+  it('10. GET /api/admin/products/meta returns active categories and partner shops', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/products/meta`, {
+      headers: { Cookie: adminCookie },
+    });
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(Array.isArray(data.categories)).toBe(true);
+    expect(Array.isArray(data.shops)).toBe(true);
+    expect(data.categories.length).toBeGreaterThan(0);
+    expect(data.shops.length).toBeGreaterThan(0);
+  });
+
+  it('11. POST /api/admin/products rejects unauthorized calls with HTTP 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/products`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Test' }),
+    });
+
+    expect(res.status).toBe(401);
+  });
+
+  it('12. POST /api/admin/products rejects customer tokens with HTTP 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/products`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: customerCookie,
+      },
+      body: JSON.stringify({ name: 'Test' }),
+    });
+
+    expect(res.status).toBe(401);
+  });
+
+  it('13. POST /api/admin/products rejects selling_price > mrp with HTTP 400', async () => {
+    const shop = await prisma.shop.findFirst({ where: { status: 'ACTIVE' } });
+    const category = await prisma.category.findFirst({ where: { is_active: true } });
+
+    const res = await fetch(`${BASE_URL}/api/admin/products`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: adminCookie,
+      },
+      body: JSON.stringify({
+        name: 'Overpriced Product',
+        unit_size: '500 g',
+        category_id: category!.id,
+        shop_id: shop!.id,
+        mrp_paise: 5000, // ₹50
+        shop_price_paise: 4000, // ₹40
+        selling_price_paise: 5500, // ₹55 > ₹50 (Illegal)
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain('cannot exceed printed MRP');
+  });
+
+  it('14. POST /api/admin/products rejects selling_price < shop_price with HTTP 400', async () => {
+    const shop = await prisma.shop.findFirst({ where: { status: 'ACTIVE' } });
+    const category = await prisma.category.findFirst({ where: { is_active: true } });
+
+    const res = await fetch(`${BASE_URL}/api/admin/products`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: adminCookie,
+      },
+      body: JSON.stringify({
+        name: 'Underpriced Product',
+        unit_size: '500 g',
+        category_id: category!.id,
+        shop_id: shop!.id,
+        mrp_paise: 5000, // ₹50
+        shop_price_paise: 4000, // ₹40
+        selling_price_paise: 3500, // ₹35 < ₹40 (Illegal negative margin)
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain('cannot be lower than shop buy price');
+  });
+
+  it('15. POST /api/admin/products rejects invalid image formats like SVG (Section 10.2)', async () => {
+    const shop = await prisma.shop.findFirst({ where: { status: 'ACTIVE' } });
+    const category = await prisma.category.findFirst({ where: { is_active: true } });
+
+    const svgPayload = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><circle/></svg>').toString('base64');
+
+    const res = await fetch(`${BASE_URL}/api/admin/products`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: adminCookie,
+      },
+      body: JSON.stringify({
+        name: 'SVG Test Product',
+        unit_size: '1 pc',
+        category_id: category!.id,
+        shop_id: shop!.id,
+        mrp_paise: 5000,
+        shop_price_paise: 3000,
+        selling_price_paise: 4500,
+        photo_base64: `data:image/svg+xml;base64,${svgPayload}`,
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain('Only JPG, PNG, and WebP images are permitted');
+  });
+
+  it('16. POST /api/admin/products creates product, records price history, and updates storefront', async () => {
+    const shop = await prisma.shop.findFirst({ where: { status: 'ACTIVE' } });
+    const category = await prisma.category.findFirst({ where: { is_active: true } });
+
+    const uniqueName = `Organic Fresh Butter ${Date.now()}`;
+    const pngHeader = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]).toString('base64');
+
+    const res = await fetch(`${BASE_URL}/api/admin/products`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: adminCookie,
+      },
+      body: JSON.stringify({
+        name: uniqueName,
+        brand: 'DairyFresh',
+        unit_size: '250 g',
+        category_id: category!.id,
+        shop_id: shop!.id,
+        mrp_paise: 12000, // ₹120
+        shop_price_paise: 9500, // ₹95
+        selling_price_paise: 11000, // ₹110
+        hsn_code: '04051000',
+        gst_rate: 5.0,
+        is_available: true,
+        is_active: true,
+        photo_base64: `data:image/png;base64,${pngHeader}`,
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.product.name).toBe(uniqueName);
+    expect(data.product.selling_price_paise).toBe(11000);
+    expect(data.product.margin_paise).toBe(1500); // 11000 - 9500
+    expect(data.product.margin_pct).toBe(13.6); // 1500 / 11000 = ~13.6%
+
+    // Verify Price History record exists
+    const history = await prisma.priceHistory.findFirst({
+      where: { product_id: data.product.id },
+    });
+    expect(history).toBeDefined();
+    expect(history!.mrp_paise).toBe(12000);
+    expect(history!.selling_price_paise).toBe(11000);
+
+    // Verify GET /api/admin/products/:id returns the created product
+    const getRes = await fetch(`${BASE_URL}/api/admin/products/${data.product.id}`, {
+      headers: { Cookie: adminCookie },
+    });
+    expect(getRes.status).toBe(200);
+    const getDetails = await getRes.json();
+    expect(getDetails.product.id).toBe(data.product.id);
+    expect(getDetails.product.price_history.length).toBeGreaterThan(0);
+
+    // Verify duplicate creation is rejected with HTTP 409
+    const dupRes = await fetch(`${BASE_URL}/api/admin/products`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: adminCookie,
+      },
+      body: JSON.stringify({
+        name: uniqueName,
+        brand: 'DairyFresh',
+        unit_size: '250 g',
+        category_id: category!.id,
+        shop_id: shop!.id,
+        mrp_paise: 12000,
+        shop_price_paise: 9500,
+        selling_price_paise: 11000,
+      }),
+    });
+    expect(dupRes.status).toBe(409);
+    const dupData = await dupRes.json();
+    expect(dupData.error).toContain('already exists for this shop');
+  });
 });
 
