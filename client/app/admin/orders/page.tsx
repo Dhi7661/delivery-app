@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { formatPaise } from "@/lib/money";
+import { getOrderStatusDisplay, getPaymentStatusDisplay } from "@/lib/orderStatus";
 
 interface OrderItemSummary {
   id: string;
@@ -75,13 +76,13 @@ const COLUMN_KEYS: Array<keyof ColumnData> = [
 ];
 
 const COLUMN_LABELS: Record<keyof ColumnData, { label: string; color: string }> = {
-  PLACED: { label: "New Orders", color: "bg-amber-100 text-amber-900 border-amber-300" },
-  CONFIRMED: { label: "Confirmed", color: "bg-blue-100 text-blue-900 border-blue-300" },
-  SENT_TO_SHOP: { label: "At Shop", color: "bg-purple-100 text-purple-900 border-purple-300" },
-  PACKED: { label: "Packed", color: "bg-indigo-100 text-indigo-900 border-indigo-300" },
-  OUT_FOR_DELIVERY: { label: "Out for Delivery", color: "bg-emerald-100 text-emerald-900 border-emerald-300" },
-  DELIVERED: { label: "Delivered", color: "bg-teal-100 text-teal-900 border-teal-300" },
-  ISSUES: { label: "Issues / Cancelled", color: "bg-rose-100 text-rose-900 border-rose-300" },
+  PLACED: { label: "New Orders", color: "bg-saffron/20 text-on-saffron border-saffron/40" },
+  CONFIRMED: { label: "Confirmed", color: "bg-saffron/20 text-on-saffron border-saffron/40" },
+  SENT_TO_SHOP: { label: "At Shop", color: "bg-saffron/20 text-on-saffron border-saffron/40" },
+  PACKED: { label: "Packed", color: "bg-saffron/20 text-on-saffron border-saffron/40" },
+  OUT_FOR_DELIVERY: { label: "Out for Delivery", color: "bg-saffron/20 text-on-saffron border-saffron/40" },
+  DELIVERED: { label: "Delivered", color: "bg-chip text-primary border-border" },
+  ISSUES: { label: "Issues / Cancelled", color: "bg-surface text-muted border-border" },
 };
 
 function OrdersBoardContent() {
@@ -300,7 +301,7 @@ function OrdersBoardContent() {
           <button
             onClick={() => setShowConfirmModal(order)}
             disabled={isBusy}
-            className="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-colors min-h-[44px] flex items-center justify-center gap-1.5 shadow-xs"
+            className="w-full py-2.5 px-3 rounded-xl bg-primary hover:bg-heading text-white text-xs font-bold transition-colors min-h-[44px] flex items-center justify-center gap-1.5 shadow-xs"
           >
             Confirm COD with Customer
           </button>
@@ -310,7 +311,7 @@ function OrdersBoardContent() {
         <button
           onClick={() => handleSendToShop(order)}
           disabled={isBusy}
-          className="w-full py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors min-h-[44px] flex items-center justify-center gap-1.5 shadow-xs"
+          className="w-full py-2.5 px-3 rounded-xl bg-primary hover:bg-heading text-white text-xs font-bold transition-colors min-h-[44px] flex items-center justify-center gap-1.5 shadow-xs"
         >
           {isBusy ? "Sending..." : "Send to Shop (WhatsApp)"}
         </button>
@@ -322,7 +323,7 @@ function OrdersBoardContent() {
         <button
           onClick={() => handleSendToShop(order)}
           disabled={isBusy}
-          className="w-full py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors min-h-[44px] flex items-center justify-center gap-1.5 shadow-xs"
+          className="w-full py-2.5 px-3 rounded-xl bg-primary hover:bg-heading text-white text-xs font-bold transition-colors min-h-[44px] flex items-center justify-center gap-1.5 shadow-xs"
         >
           {isBusy ? "Sending..." : "Send to Shop (WhatsApp)"}
         </button>
@@ -334,7 +335,7 @@ function OrdersBoardContent() {
         <button
           onClick={() => handleMarkPacked(order)}
           disabled={isBusy}
-          className="w-full py-2.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-colors min-h-[44px] flex items-center justify-center gap-1.5 shadow-xs"
+          className="w-full py-2.5 px-3 rounded-xl bg-primary hover:bg-heading text-white text-xs font-bold transition-colors min-h-[44px] flex items-center justify-center gap-1.5 shadow-xs"
         >
           {isBusy ? "Updating..." : "Mark Packed (Shop Reply)"}
         </button>
@@ -346,7 +347,7 @@ function OrdersBoardContent() {
         <button
           onClick={() => handleOutForDelivery(order)}
           disabled={isBusy}
-          className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors min-h-[44px] flex items-center justify-center gap-1.5 shadow-xs"
+          className="w-full py-2.5 px-3 rounded-xl bg-primary hover:bg-heading text-white text-xs font-bold transition-colors min-h-[44px] flex items-center justify-center gap-1.5 shadow-xs"
         >
           {isBusy ? "Dispatching..." : "Assign & Out for Delivery"}
         </button>
@@ -358,7 +359,7 @@ function OrdersBoardContent() {
         <button
           onClick={() => handleMarkDelivered(order)}
           disabled={isBusy}
-          className="w-full py-2.5 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-colors min-h-[44px] flex items-center justify-center gap-1.5 shadow-xs"
+          className="w-full py-2.5 px-3 rounded-xl bg-primary hover:bg-heading text-white text-xs font-bold transition-colors min-h-[44px] flex items-center justify-center gap-1.5 shadow-xs"
         >
           {isBusy ? "Saving..." : "Mark Delivered (Collect Cash)"}
         </button>
@@ -376,14 +377,14 @@ function OrdersBoardContent() {
       <div
         key={order.id}
         className={`w-full max-w-full p-3.5 rounded-2xl bg-white border border-gray-200 shadow-xs space-y-3 transition-all hover:border-gray-300 ${
-          isCodUnconfirmed ? "ring-2 ring-amber-400/50" : ""
+          isCodUnconfirmed ? "ring-2 ring-saffron/60" : ""
         }`}
       >
         {/* Header: Order Number & Time */}
         <div className="flex items-center justify-between gap-2 border-b border-gray-100 pb-2.5">
           <button
             onClick={() => setSelectedOrder(order)}
-            className="text-xs font-black text-gray-900 hover:text-emerald-700 underline truncate max-w-[170px] text-left whitespace-nowrap"
+            className="text-xs font-black text-heading hover:text-primary underline truncate max-w-[170px] text-left whitespace-nowrap"
             title={`Order #${order.order_no} - click to view details`}
           >
             #{order.order_no}
@@ -401,7 +402,7 @@ function OrdersBoardContent() {
           <div>
             <a
               href={`tel:${order.customer_phone}`}
-              className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1 min-h-[28px]"
+              className="text-[11px] font-bold text-primary hover:underline inline-flex items-center gap-1 min-h-[28px]"
               title={`Call ${order.customer_phone}`}
             >
               📞 {order.customer_phone}
@@ -412,13 +413,13 @@ function OrdersBoardContent() {
 
         {/* Warning Flags */}
         {isCodUnconfirmed && (
-          <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] font-bold text-amber-800 flex items-center gap-1.5">
+          <div className="p-2 rounded-lg bg-saffron/15 border border-saffron/30 text-[11px] font-bold text-on-saffron flex items-center gap-1.5">
             ⚠️ COD Unconfirmed &bull; Call customer before sending to shop
           </div>
         )}
 
         {order.shop_packing_note && (
-          <p className="text-[11px] text-purple-700 bg-purple-50 p-2 rounded-lg border border-purple-200 line-clamp-2">
+          <p className="text-[11px] text-muted bg-surface p-2 rounded-lg border border-border line-clamp-2">
             💬 Shop: {order.shop_packing_note}
           </p>
         )}
@@ -441,10 +442,12 @@ function OrdersBoardContent() {
           </span>
           <span
             className={`font-bold ${
-              order.payment_status === "PAID" ? "text-emerald-700" : "text-amber-700"
+              order.payment_status === "SUCCESS" || order.payment_status === "PAID"
+                ? "text-primary"
+                : "text-on-saffron"
             }`}
           >
-            {order.payment_status}
+            {getPaymentStatusDisplay(order.payment_status)}
           </span>
         </div>
 
@@ -455,14 +458,14 @@ function OrdersBoardContent() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setSelectedOrder(order)}
-              className="flex-1 min-w-[120px] py-1.5 px-2 rounded-lg border border-gray-200 text-[11px] font-bold text-gray-600 hover:bg-gray-50 min-h-[36px]"
+              className="flex-1 min-w-[120px] py-1.5 px-2 rounded-lg border border-primary text-[11px] font-bold text-primary hover:bg-chip min-h-[36px]"
             >
               Items / Availability
             </button>
             {!["DELIVERED", "CANCELLED"].includes(order.status) && (
               <button
                 onClick={() => setShowCancelModal(order)}
-                className="py-1.5 px-2.5 rounded-lg border border-rose-200 text-[11px] font-bold text-rose-700 hover:bg-rose-50 min-h-[36px]"
+                className="py-1.5 px-2.5 rounded-lg border border-primary text-[11px] font-bold text-primary hover:bg-chip min-h-[36px]"
                 title="Cancel order"
               >
                 Cancel
@@ -483,7 +486,7 @@ function OrdersBoardContent() {
             <h1 className="text-xl sm:text-2xl font-black text-heading tracking-tight">
               Orders Board
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-chip text-primary border border-border">
               {counts.TOTAL} orders
             </span>
           </div>
@@ -513,7 +516,7 @@ function OrdersBoardContent() {
 
       {/* Global Error Banner */}
       {actionError && (
-        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-surface border border-danger/40 text-danger text-xs font-semibold flex items-center justify-between">
           <span>{actionError}</span>
           <button onClick={() => setActionError(null)} className="p-1 font-bold">✕</button>
         </div>
@@ -527,7 +530,7 @@ function OrdersBoardContent() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by order #, customer name, or phone..."
-            className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
+            className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
           />
           <svg className="w-5 h-5 text-gray-400 absolute left-3 top-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -539,7 +542,7 @@ function OrdersBoardContent() {
           <button
             onClick={() => setActiveTab("all")}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap min-h-[38px] ${
-              activeTab === "all" ? "bg-emerald-600 text-white" : "bg-gray-100 text-gray-700"
+              activeTab === "all" ? "bg-primary text-white" : "bg-chip text-muted border border-border"
             }`}
           >
             All ({counts.TOTAL})
@@ -549,7 +552,7 @@ function OrdersBoardContent() {
               key={k}
               onClick={() => setActiveTab(k)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap min-h-[38px] ${
-                activeTab === k ? "bg-emerald-600 text-white" : "bg-gray-100 text-gray-700"
+                activeTab === k ? "bg-primary text-white" : "bg-chip text-muted border border-border"
               }`}
             >
               {COLUMN_LABELS[k].label} ({counts[k]})
@@ -644,7 +647,7 @@ function OrdersBoardContent() {
                   onClick={() => setConfirmMethod("PHONE")}
                   className={`py-2 px-3 rounded-xl border text-xs font-bold min-h-[44px] ${
                     confirmMethod === "PHONE"
-                      ? "border-emerald-600 bg-emerald-50 text-emerald-800"
+                      ? "border-primary bg-chip text-primary"
                       : "border-gray-200 text-gray-700"
                   }`}
                 >
@@ -655,7 +658,7 @@ function OrdersBoardContent() {
                   onClick={() => setConfirmMethod("WHATSAPP")}
                   className={`py-2 px-3 rounded-xl border text-xs font-bold min-h-[44px] ${
                     confirmMethod === "WHATSAPP"
-                      ? "border-emerald-600 bg-emerald-50 text-emerald-800"
+                      ? "border-primary bg-chip text-primary"
                       : "border-gray-200 text-gray-700"
                   }`}
                 >
@@ -674,7 +677,7 @@ function OrdersBoardContent() {
               <button
                 onClick={() => handleConfirmCustomer(showConfirmModal)}
                 disabled={actionLoadingOrderNo === showConfirmModal.order_no}
-                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white min-h-[44px]"
+                className="px-4 py-2.5 rounded-xl bg-primary hover:bg-heading text-xs font-bold text-white min-h-[44px]"
               >
                 {actionLoadingOrderNo === showConfirmModal.order_no ? "Confirming..." : "Record Confirmation"}
               </button>
@@ -687,7 +690,7 @@ function OrdersBoardContent() {
       {showCancelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-xl border border-gray-200 space-y-4">
-            <h3 className="text-base font-bold text-rose-800">
+            <h3 className="text-base font-bold text-heading">
               Cancel Order #{showCancelModal.order_no}
             </h3>
             <p className="text-xs text-gray-600">
@@ -702,7 +705,7 @@ function OrdersBoardContent() {
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 placeholder="e.g. Customer requested cancellation, shop out of stock..."
-                className="w-full p-3 rounded-xl border border-gray-200 text-xs focus:ring-2 focus:ring-rose-500"
+                className="w-full p-3 rounded-xl border border-gray-200 text-xs focus:ring-2 focus:ring-primary"
               />
             </div>
 
@@ -719,7 +722,7 @@ function OrdersBoardContent() {
               <button
                 onClick={handleCancelOrder}
                 disabled={!cancelReason.trim() || actionLoadingOrderNo === showCancelModal.order_no}
-                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-xs font-bold text-white min-h-[44px] disabled:opacity-50"
+                className="px-4 py-2.5 rounded-xl border border-primary text-xs font-bold text-primary hover:bg-chip min-h-[44px] disabled:opacity-50"
               >
                 {actionLoadingOrderNo === showCancelModal.order_no ? "Cancelling..." : "Confirm Cancellation"}
               </button>
@@ -737,7 +740,7 @@ function OrdersBoardContent() {
                 <h3 className="text-base font-bold text-gray-900">
                   Order Details &bull; #{selectedOrder.order_no}
                 </h3>
-                <span className="text-xs text-gray-500">Status: {selectedOrder.status}</span>
+                <span className="text-xs text-muted">Status: {getOrderStatusDisplay(selectedOrder.status).label}</span>
               </div>
               <button
                 onClick={() => setSelectedOrder(null)}
@@ -752,11 +755,11 @@ function OrdersBoardContent() {
               <div>
                 <span className="text-gray-400 font-bold block">CUSTOMER</span>
                 <p className="font-bold text-gray-800">{selectedOrder.customer_name}</p>
-                <p className="text-emerald-700 font-semibold">{selectedOrder.customer_phone}</p>
+                <p className="text-primary font-semibold"><a href={`tel:${selectedOrder.customer_phone}`} className="hover:underline">📞 {selectedOrder.customer_phone}</a></p>
               </div>
               <div>
                 <span className="text-gray-400 font-bold block">PAYMENT</span>
-                <p className="font-bold text-gray-800">{selectedOrder.payment_method} &bull; {selectedOrder.payment_status}</p>
+                <p className="font-bold text-gray-800">{selectedOrder.payment_method} &bull; {getPaymentStatusDisplay(selectedOrder.payment_status)}</p>
                 <p className="text-gray-600 font-black">{formatPaise(selectedOrder.total_paise)}</p>
               </div>
             </div>
@@ -789,7 +792,7 @@ function OrdersBoardContent() {
                       {item.is_available ? (
                         <button
                           onClick={() => handleMarkItemUnavailable(selectedOrder, item.id)}
-                          className="px-2.5 py-1 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 font-bold text-[11px] hover:bg-amber-100 min-h-[36px]"
+                          className="px-2.5 py-1 rounded-lg border border-primary text-primary hover:bg-chip font-bold text-[11px] min-h-[36px]"
                           title="Mark shop out of stock for this item"
                         >
                           Mark Unavailable

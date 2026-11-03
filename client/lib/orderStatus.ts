@@ -120,3 +120,17 @@ export const STATUS_COLORS: Record<OrderStatus, { bg: string; text: string; bord
   RETURNED: { bg: 'bg-surface', text: 'text-muted', border: 'border-border', badge: 'bg-surface text-muted border border-border/60' },
   CLOSED: { bg: 'bg-surface', text: 'text-muted', border: 'border-border', badge: 'bg-surface text-muted border border-border/60' },
 };
+
+// Payment status human-readable labels
+export const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  PENDING: 'Pending',
+  PENDING_COLLECTION: 'Cash to collect',
+  SUCCESS: 'Paid',
+  PAID: 'Paid',
+  FAILED: 'Failed',
+  REFUNDED: 'Refunded',
+};
+
+export function getPaymentStatusDisplay(status: string): string {
+  return PAYMENT_STATUS_LABELS[status] || status.replace(/_/g, ' ');
+}
