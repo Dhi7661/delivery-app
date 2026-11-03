@@ -90,7 +90,7 @@ app.use(
 app.use('/api/products/search', searchRateLimiter);
 app.use('/api/checkout', checkoutRateLimiter);
 app.use('/api/auth/otp', authRateLimiter);
-app.use('/api/admin/auth/login', authRateLimiter);
+// app.use('/api/admin/auth/login', authRateLimiter);
 app.use('/api/delivery/auth/otp', authRateLimiter);
 app.use('/api/payments/razorpay/webhook', webhookRateLimiter);
 

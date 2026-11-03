@@ -7,9 +7,14 @@ import { API_BASE_URL } from '@/lib/api';
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const [step, setStep] = useState<'CREDENTIALS' | '2FA'>('CREDENTIALS');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [tempToken, setTempToken] = useState('');
+  const [maskedContact, setMaskedContact] = useState('');
+  const [devOtp, setDevOtp] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -24,7 +29,7 @@ export default function AdminLoginPage() {
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.admin) {
-            router.replace('/admin/products/upload');
+            router.replace('/admin/orders');
             return;
           }
         }
@@ -38,7 +43,8 @@ export default function AdminLoginPage() {
     checkExistingSession();
   }, [router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Step 1: Submit Email and Password
+  const handleCredentialsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
@@ -67,8 +73,18 @@ export default function AdminLoginPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        // Successfully authenticated!
-        router.push('/admin/products/upload');
+        if (data.requires2FA) {
+          // 2FA challenge required (Spec v1.2)
+          setTempToken(data.tempToken || '');
+          setMaskedContact(data.maskedContact || '');
+          if (data.devOtp) {
+            setDevOtp(data.devOtp);
+          }
+          setStep('2FA');
+        } else {
+          // Direct login success
+          router.replace('/admin/orders');
+        }
       } else if (res.status === 429) {
         setErrorMessage(
           data.error || 'Too many failed login attempts. Please wait 15 minutes before trying again.'
@@ -83,64 +99,93 @@ export default function AdminLoginPage() {
     }
   };
 
+  // Step 2: Submit 2FA Code
+  const handle2FASubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+
+    const cleanOtp = twoFactorCode.trim().replace(/\D/g, '');
+    if (cleanOtp.length !== 6) {
+      setErrorMessage('Please enter the 6-digit verification code.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/auth/login/2fa`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          tempToken,
+          otp: cleanOtp,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        router.replace('/admin/orders');
+      } else {
+        setErrorMessage(data.error || 'Invalid or expired 2FA code. Please try again.');
+      }
+    } catch (err) {
+      setErrorMessage('Verification failed. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#FEF9F1] flex items-center justify-center p-4">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-slate-500 font-medium">Checking admin session...</p>
+          <div className="w-8 h-8 border-3 border-[#6B3A1E] border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-[#52443D] font-medium">Checking admin session...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#FEF9F1] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 text-[#1D1C17]">
       {/* Brand Header */}
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <Link href="/" className="inline-flex items-center gap-2 mb-4 group">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white font-bold text-xl shadow-md group-hover:scale-105 transition-transform">
+          <div className="w-12 h-12 rounded-2xl bg-[#FEBA49] flex items-center justify-center text-[#704B00] font-black text-2xl shadow-sm">
             P
           </div>
-          <span className="text-2xl font-black text-slate-900 tracking-tight">PlukIt</span>
+          <span className="text-2xl font-black text-[#50240A] tracking-tight">PlukIt</span>
         </Link>
-        <div className="inline-block px-3 py-1 bg-chip text-heading text-xs font-bold rounded-full uppercase tracking-wider mb-2">
+        <div className="inline-block px-3 py-1 bg-[#F8F3EB] border border-[#D7C2B9] text-[#6B3A1E] text-xs font-bold rounded-full uppercase tracking-wider mb-2">
           Admin Portal
         </div>
-        <h1 className="text-2xl font-extrabold text-slate-900">Sign in to your account</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Operations, catalog management, and order fulfillment
+        <h1 className="text-2xl font-extrabold text-[#50240A]">
+          {step === 'CREDENTIALS' ? 'Sign in to Admin Dashboard' : 'Two-Factor Authentication'}
+        </h1>
+        <p className="mt-1 text-xs text-[#52443D]">
+          {step === 'CREDENTIALS'
+            ? 'Operations, order dispatch, payouts, and catalog control'
+            : `Enter the 6-digit security code for ${email}`}
         </p>
       </div>
 
       {/* Login Card */}
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-6 shadow-sm border border-slate-200 rounded-2xl sm:px-10">
+      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-6 shadow-sm border border-[#D7C2B9] rounded-2xl sm:px-10">
           {errorMessage && (
-            <div className="mb-6 p-4 rounded-xl bg-surface border border-border text-heading text-sm flex items-start gap-3">
-              <svg
-                className="w-5 h-5 text-primary flex-shrink-0 mt-0.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-              <div className="font-medium">{errorMessage}</div>
+            <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-[#B42318] text-xs font-semibold flex items-start gap-2.5">
+              <span>⚠️</span>
+              <div className="leading-relaxed">{errorMessage}</div>
             </div>
           )}
 
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="admin-email" className="block text-sm font-semibold text-slate-700 mb-1">
-                Admin Email
-              </label>
-              <div className="relative rounded-lg">
+          {step === 'CREDENTIALS' ? (
+            <form className="space-y-4" onSubmit={handleCredentialsSubmit}>
+              <div>
+                <label htmlFor="admin-email" className="block text-xs font-bold text-[#50240A] uppercase tracking-wider mb-1.5">
+                  Admin Email
+                </label>
                 <input
                   id="admin-email"
                   type="email"
@@ -149,56 +194,100 @@ export default function AdminLoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="admin@plukit.in"
-                  className="block w-full px-4 py-3 min-h-[44px] rounded-xl border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-base"
+                  className="block w-full px-4 py-3 min-h-[44px] rounded-xl bg-[#F8F3EB] border border-[#D7C2B9] text-[#1D1C17] text-sm font-semibold placeholder-[#52443D]/40 focus:outline-none focus:ring-2 focus:ring-[#FEBA49]"
                 />
               </div>
-            </div>
 
-            <div>
-              <label htmlFor="admin-password" className="block text-sm font-semibold text-slate-700 mb-1">
-                Password
-              </label>
-              <div className="relative rounded-lg">
-                <input
-                  id="admin-password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="block w-full px-4 py-3 min-h-[44px] pr-12 rounded-xl border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-base"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 px-3 flex items-center text-xs font-semibold text-slate-500 hover:text-slate-800"
-                >
-                  {showPassword ? 'Hide' : 'Show'}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex justify-center items-center py-3.5 px-4 min-h-[44px] border border-transparent rounded-xl shadow-sm text-base font-bold text-white bg-primary hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 transition-colors"
-            >
-              {loading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Signing in...</span>
+              <div>
+                <label htmlFor="admin-password" className="block text-xs font-bold text-[#50240A] uppercase tracking-wider mb-1.5">
+                  Password
+                </label>
+                <div className="relative rounded-lg">
+                  <input
+                    id="admin-password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="block w-full px-4 py-3 min-h-[44px] pr-14 rounded-xl bg-[#F8F3EB] border border-[#D7C2B9] text-[#1D1C17] text-sm font-semibold placeholder-[#52443D]/40 focus:outline-none focus:ring-2 focus:ring-[#FEBA49]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 px-3 flex items-center text-xs font-bold text-[#6B3A1E] hover:underline"
+                  >
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
                 </div>
-              ) : (
-                'Sign In to Dashboard'
-              )}
-            </button>
-          </form>
+              </div>
 
-          <div className="mt-6 border-t border-slate-100 pt-4 text-center">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex justify-center items-center py-3 px-4 min-h-[44px] rounded-xl shadow-sm text-sm font-extrabold text-white bg-[#6B3A1E] hover:bg-[#50240A] disabled:opacity-50 transition-all cursor-pointer mt-2"
+              >
+                {loading ? 'Verifying credentials...' : 'Continue to 2FA Verification'}
+              </button>
+            </form>
+          ) : (
+            <form className="space-y-4" onSubmit={handle2FASubmit}>
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label htmlFor="admin-otp" className="block text-xs font-bold text-[#50240A] uppercase tracking-wider">
+                    Enter 6-Digit Code
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep('CREDENTIALS');
+                      setTwoFactorCode('');
+                      setErrorMessage(null);
+                    }}
+                    className="text-xs font-bold text-[#6B3A1E] hover:underline cursor-pointer"
+                  >
+                    Change Email
+                  </button>
+                </div>
+                <input
+                  id="admin-otp"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  autoFocus
+                  required
+                  value={twoFactorCode}
+                  onChange={(e) => setTwoFactorCode(e.target.value)}
+                  placeholder="123456"
+                  className="block w-full px-4 py-3 min-h-[44px] rounded-xl bg-[#F8F3EB] border border-[#D7C2B9] text-center text-2xl font-black tracking-widest text-[#1D1C17] placeholder-[#52443D]/30 focus:outline-none focus:ring-2 focus:ring-[#FEBA49]"
+                />
+
+                <p className="text-[11px] text-[#52443D] mt-2 text-center">
+                  Code sent to verified contact {maskedContact ? `(${maskedContact})` : ''}
+                </p>
+
+                <div className="mt-3 p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-center">
+                  <span className="text-[11px] font-bold text-amber-800">
+                    Dev Test Code: <span className="font-mono text-xs">{devOtp || '123456'}</span>
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading || twoFactorCode.trim().length !== 6}
+                className="w-full flex justify-center items-center py-3 px-4 min-h-[44px] rounded-xl shadow-sm text-sm font-extrabold text-[#704B00] bg-[#FEBA49] hover:bg-[#efa630] disabled:opacity-50 transition-all cursor-pointer mt-2"
+              >
+                {loading ? 'Verifying 2FA...' : 'Verify & Enter Dashboard'}
+              </button>
+            </form>
+          )}
+
+          <div className="mt-6 border-t border-[#D7C2B9]/50 pt-4 text-center">
             <Link
               href="/"
-              className="text-xs font-medium text-slate-500 hover:text-primary transition-colors"
+              className="text-xs font-bold text-[#6B3A1E] hover:underline transition-colors"
             >
               ← Back to PlukIt Customer Store
             </Link>

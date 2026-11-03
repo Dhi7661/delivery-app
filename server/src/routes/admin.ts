@@ -221,6 +221,7 @@ adminRouter.post('/admin/auth/login', async (req: Request, res: Response) => {
         tempToken,
         maskedContact: maskPhone(adminUser.phone || '9876543210'),
         message: 'Two-factor verification code required to complete login.',
+        ...(process.env.NODE_ENV !== 'production' ? { devOtp: challengeOtp } : {}),
       });
     }
 
