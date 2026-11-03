@@ -472,7 +472,7 @@ function OrdersBoardContent() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 w-full max-w-full space-y-6">
       {/* Header & Stats */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-gray-200">
         <div>
@@ -557,7 +557,7 @@ function OrdersBoardContent() {
 
       {/* Kanban Board Container */}
       {/* Desktop Multi-column Kanban View (>= 1024px) */}
-      <div className="hidden lg:grid lg:grid-cols-7 gap-4 items-start overflow-x-auto pb-4">
+      <div className="hidden lg:flex flex-row gap-4 items-start overflow-x-auto pb-4 admin-board-scroll">
         {COLUMN_KEYS.map((colKey) => {
           const colInfo = COLUMN_LABELS[colKey];
           const orders = columns[colKey] || [];
@@ -565,10 +565,10 @@ function OrdersBoardContent() {
           return (
             <div
               key={colKey}
-              className="bg-gray-50/80 rounded-2xl p-3 border border-gray-200/80 space-y-3 min-w-[200px]"
+              className="w-[300px] min-w-[280px] shrink-0 flex flex-col max-h-[calc(100vh-220px)] bg-surface/60 rounded-2xl p-3 border border-border"
             >
               {/* Column Header */}
-              <div className="flex items-center justify-between pb-2 border-b border-gray-200">
+              <div className="flex items-center justify-between pb-2 border-b border-border shrink-0">
                 <span className="text-xs font-bold text-gray-800">{colInfo.label}</span>
                 <span className={`px-2 py-0.5 rounded-full text-[11px] font-black border ${colInfo.color}`}>
                   {orders.length}
@@ -576,9 +576,9 @@ function OrdersBoardContent() {
               </div>
 
               {/* Cards List */}
-              <div className="space-y-3">
+              <div className="flex-1 overflow-y-auto space-y-3 pt-3 pr-1 admin-board-scroll">
                 {orders.length === 0 ? (
-                  <p className="text-center py-6 text-xs text-gray-400 italic">No orders</p>
+                  <p className="text-center py-6 text-xs text-muted italic">No orders</p>
                 ) : (
                   orders.map(renderOrderCard)
                 )}

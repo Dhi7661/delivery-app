@@ -33,3 +33,20 @@ body {
   color: var(--color-text);
   font-family: var(--font-sans);
 }
+
+.admin-board-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) var(--color-surface);
+}
+.admin-board-scroll::-webkit-scrollbar {
+  height: 8px;
+  width: 6px;
+}
+.admin-board-scroll::-webkit-scrollbar-track {
+  background: var(--color-surface);
+  border-radius: 4px;
+}
+.admin-board-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 4px;
+}
